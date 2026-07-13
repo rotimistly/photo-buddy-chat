@@ -35,6 +35,45 @@ export type Database = {
         }
         Relationships: []
       }
+      audit_logs: {
+        Row: {
+          action: string
+          actor_admin_id: string
+          created_at: string
+          id: string
+          ip: string | null
+          metadata: Json
+          target_id: string | null
+          target_owner_admin_id: string | null
+          target_type: string
+          user_agent: string | null
+        }
+        Insert: {
+          action: string
+          actor_admin_id: string
+          created_at?: string
+          id?: string
+          ip?: string | null
+          metadata?: Json
+          target_id?: string | null
+          target_owner_admin_id?: string | null
+          target_type: string
+          user_agent?: string | null
+        }
+        Update: {
+          action?: string
+          actor_admin_id?: string
+          created_at?: string
+          id?: string
+          ip?: string | null
+          metadata?: Json
+          target_id?: string | null
+          target_owner_admin_id?: string | null
+          target_type?: string
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
       call_history: {
         Row: {
           callee_id: string
