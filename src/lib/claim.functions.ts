@@ -1,0 +1,59 @@
+import { createServerFn } from "@tanstack/react-start";
+import { z } from "zod";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+
+async function assertIsAdmin(supabase: any, userId: string) {
+  const { data, error } = await supabase
+    .from("user_roles")
+    .select("role")
+    .eq("user_id", userId)
+    .eq("role", "admin")
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data) throw new Error("Access Denied.");
+}
+
+export const claimUser = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => z.object({ userId: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    await assertIsAdmin(context.supabase, context.userId);
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    // Atomic claim: only succeeds if not already assigned.
+    const { data: claimed, error: claimErr } = await supabaseAdmin
+      .from("profiles")
+      .update({ assigned_admin_id: context.userId, status: "assigned" })
+      .eq("id", data.userId)
+      .is("assigned_admin_id", null)
+      .eq("is_admin", false)
+      .select("id")
+      .maybeSingle();
+    if (claimErr) throw new Error(claimErr.message);
+    if (!claimed) throw new Error("This user has already been assigned.");
+
+    // Create their conversation
+    const { error: convErr } = await supabaseAdmin
+      .from("conversations")
+      .insert({ user_id: data.userId, owner_admin_id: context.userId });
+    if (convErr && !convErr.message.includes("duplicate")) throw new Error(convErr.message);
+
+    return { ok: true };
+  });
+
+export const releaseUser = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => z.object({ userId: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    await assertIsAdmin(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin
+      .from("profiles")
+      .update({ assigned_admin_id: null, status: "waiting" })
+      .eq("id", data.userId)
+      .eq("assigned_admin_id", context.userId);
+    if (error) throw new Error(error.message);
+    await supabaseAdmin.from("conversations").delete().eq("user_id", data.userId);
+    return { ok: true };
+  });
