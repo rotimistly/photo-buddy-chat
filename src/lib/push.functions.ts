@@ -13,25 +13,22 @@ export const savePushSubscription = createServerFn({ method: "POST" })
   .inputValidator((input) => subInput.parse(input))
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const row =
-      data.kind === "admin"
-        ? {
-            endpoint: data.endpoint,
-            subscription: data.subscription,
-            role: "admin",
-            owner_admin_id: context.userId,
-            user_id: null as string | null,
-          }
-        : {
-            endpoint: data.endpoint,
-            subscription: data.subscription,
-            role: "user",
-            owner_admin_id: null as string | null,
-            user_id: context.userId,
-          };
+    const row: {
+      endpoint: string;
+      subscription: unknown;
+      role: string;
+      owner_admin_id: string | null;
+      user_id: string | null;
+    } = {
+      endpoint: data.endpoint,
+      subscription: data.subscription,
+      role: data.kind,
+      owner_admin_id: data.kind === "admin" ? context.userId : null,
+      user_id: data.kind === "user" ? context.userId : null,
+    };
     const { error } = await supabaseAdmin
       .from("push_subscriptions")
-      .upsert(row, { onConflict: "endpoint" });
+      .upsert(row as never, { onConflict: "endpoint" });
     if (error) throw new Error(error.message);
     return { ok: true };
   });
