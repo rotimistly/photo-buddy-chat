@@ -14,31 +14,96 @@ export type Database = {
   }
   public: {
     Tables: {
+      announcements: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          owner_admin_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          id?: string
+          owner_admin_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          owner_admin_id?: string
+        }
+        Relationships: []
+      }
+      call_history: {
+        Row: {
+          callee_id: string
+          caller_id: string
+          conversation_id: string
+          duration_seconds: number
+          ended_at: string | null
+          id: string
+          owner_admin_id: string
+          started_at: string
+          status: string
+        }
+        Insert: {
+          callee_id: string
+          caller_id: string
+          conversation_id: string
+          duration_seconds?: number
+          ended_at?: string | null
+          id?: string
+          owner_admin_id: string
+          started_at?: string
+          status: string
+        }
+        Update: {
+          callee_id?: string
+          caller_id?: string
+          conversation_id?: string
+          duration_seconds?: number
+          ended_at?: string | null
+          id?: string
+          owner_admin_id?: string
+          started_at?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "call_history_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       conversations: {
         Row: {
           created_at: string
           id: string
-          share_token: string
-          status: string
-          subject: string
+          last_admin_read_at: string | null
+          last_user_read_at: string | null
+          owner_admin_id: string
           updated_at: string
           user_id: string
         }
         Insert: {
           created_at?: string
           id?: string
-          share_token?: string
-          status?: string
-          subject?: string
+          last_admin_read_at?: string | null
+          last_user_read_at?: string | null
+          owner_admin_id: string
           updated_at?: string
           user_id: string
         }
         Update: {
           created_at?: string
           id?: string
-          share_token?: string
-          status?: string
-          subject?: string
+          last_admin_read_at?: string | null
+          last_user_read_at?: string | null
+          owner_admin_id?: string
           updated_at?: string
           user_id?: string
         }
@@ -50,7 +115,10 @@ export type Database = {
           conversation_id: string
           created_at: string
           id: string
-          image_url: string | null
+          media_kind: string | null
+          media_meta: Json | null
+          media_path: string | null
+          owner_admin_id: string
           sender_id: string
         }
         Insert: {
@@ -58,7 +126,10 @@ export type Database = {
           conversation_id: string
           created_at?: string
           id?: string
-          image_url?: string | null
+          media_kind?: string | null
+          media_meta?: Json | null
+          media_path?: string | null
+          owner_admin_id: string
           sender_id: string
         }
         Update: {
@@ -66,7 +137,10 @@ export type Database = {
           conversation_id?: string
           created_at?: string
           id?: string
-          image_url?: string | null
+          media_kind?: string | null
+          media_meta?: Json | null
+          media_path?: string | null
+          owner_admin_id?: string
           sender_id?: string
         }
         Relationships: [
@@ -81,40 +155,88 @@ export type Database = {
       }
       profiles: {
         Row: {
-          avatar_url: string | null
+          assigned_admin_id: string | null
           created_at: string
-          display_name: string | null
-          email: string | null
+          four_digit_id: string | null
           id: string
+          is_admin: boolean
+          last_seen_at: string | null
+          name: string
+          name_lower: string | null
+          status: string
+          updated_at: string
         }
         Insert: {
-          avatar_url?: string | null
+          assigned_admin_id?: string | null
           created_at?: string
-          display_name?: string | null
-          email?: string | null
+          four_digit_id?: string | null
           id: string
+          is_admin?: boolean
+          last_seen_at?: string | null
+          name: string
+          name_lower?: string | null
+          status?: string
+          updated_at?: string
         }
         Update: {
-          avatar_url?: string | null
+          assigned_admin_id?: string | null
           created_at?: string
-          display_name?: string | null
-          email?: string | null
+          four_digit_id?: string | null
           id?: string
+          is_admin?: boolean
+          last_seen_at?: string | null
+          name?: string
+          name_lower?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      push_subscriptions: {
+        Row: {
+          created_at: string
+          endpoint: string
+          id: string
+          owner_admin_id: string | null
+          role: string
+          subscription: Json
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          endpoint: string
+          id?: string
+          owner_admin_id?: string | null
+          role: string
+          subscription: Json
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          endpoint?: string
+          id?: string
+          owner_admin_id?: string | null
+          role?: string
+          subscription?: Json
+          user_id?: string | null
         }
         Relationships: []
       }
       user_roles: {
         Row: {
+          created_at: string
           id: string
           role: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
         Insert: {
+          created_at?: string
           id?: string
           role: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
         Update: {
+          created_at?: string
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
@@ -126,6 +248,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_seats_available: { Args: never; Returns: number }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -133,10 +256,11 @@ export type Database = {
         }
         Returns: boolean
       }
-      is_support: { Args: { _user_id: string }; Returns: boolean }
+      is_admin: { Args: { _user_id: string }; Returns: boolean }
+      my_assigned_admin: { Args: never; Returns: string }
     }
     Enums: {
-      app_role: "admin" | "support" | "user"
+      app_role: "admin" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -264,7 +388,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "support", "user"],
+      app_role: ["admin", "user"],
     },
   },
 } as const
