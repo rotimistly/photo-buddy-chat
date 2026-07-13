@@ -67,5 +67,13 @@ export const releaseUser = createServerFn({ method: "POST" })
       .eq("assigned_admin_id", context.userId);
     if (error) throw new Error(error.message);
     await supabaseAdmin.from("conversations").delete().eq("user_id", data.userId);
+    const { writeAuditLog } = await import("./audit.server");
+    await writeAuditLog({
+      actor_admin_id: context.userId,
+      action: "conversation.release",
+      target_type: "user",
+      target_id: data.userId,
+      target_owner_admin_id: context.userId,
+    });
     return { ok: true };
   });
