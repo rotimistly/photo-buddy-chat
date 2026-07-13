@@ -10,11 +10,20 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ShareTokenRouteImport } from './routes/share.$token'
+import { Route as AuthenticatedChatsRouteImport } from './routes/_authenticated/chats'
+import { Route as AuthenticatedChatsIndexRouteImport } from './routes/_authenticated/chats.index'
+import { Route as AuthenticatedChatsThreadIdRouteImport } from './routes/_authenticated/chats.$threadId'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
+  id: '/_authenticated',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -22,31 +31,80 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ShareTokenRoute = ShareTokenRouteImport.update({
+  id: '/share/$token',
+  path: '/share/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedChatsRoute = AuthenticatedChatsRouteImport.update({
+  id: '/chats',
+  path: '/chats',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedChatsIndexRoute = AuthenticatedChatsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AuthenticatedChatsRoute,
+} as any)
+const AuthenticatedChatsThreadIdRoute =
+  AuthenticatedChatsThreadIdRouteImport.update({
+    id: '/$threadId',
+    path: '/$threadId',
+    getParentRoute: () => AuthenticatedChatsRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/chats': typeof AuthenticatedChatsRouteWithChildren
+  '/share/$token': typeof ShareTokenRoute
+  '/chats/$threadId': typeof AuthenticatedChatsThreadIdRoute
+  '/chats/': typeof AuthenticatedChatsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/share/$token': typeof ShareTokenRoute
+  '/chats/$threadId': typeof AuthenticatedChatsThreadIdRoute
+  '/chats': typeof AuthenticatedChatsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/_authenticated/chats': typeof AuthenticatedChatsRouteWithChildren
+  '/share/$token': typeof ShareTokenRoute
+  '/_authenticated/chats/$threadId': typeof AuthenticatedChatsThreadIdRoute
+  '/_authenticated/chats/': typeof AuthenticatedChatsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/chats'
+    | '/share/$token'
+    | '/chats/$threadId'
+    | '/chats/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth'
-  id: '__root__' | '/' | '/auth'
+  to: '/' | '/auth' | '/share/$token' | '/chats/$threadId' | '/chats'
+  id:
+    | '__root__'
+    | '/'
+    | '/_authenticated'
+    | '/auth'
+    | '/_authenticated/chats'
+    | '/share/$token'
+    | '/_authenticated/chats/$threadId'
+    | '/_authenticated/chats/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  ShareTokenRoute: typeof ShareTokenRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -58,6 +116,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -65,12 +130,66 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/share/$token': {
+      id: '/share/$token'
+      path: '/share/$token'
+      fullPath: '/share/$token'
+      preLoaderRoute: typeof ShareTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/chats': {
+      id: '/_authenticated/chats'
+      path: '/chats'
+      fullPath: '/chats'
+      preLoaderRoute: typeof AuthenticatedChatsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/chats/': {
+      id: '/_authenticated/chats/'
+      path: '/'
+      fullPath: '/chats/'
+      preLoaderRoute: typeof AuthenticatedChatsIndexRouteImport
+      parentRoute: typeof AuthenticatedChatsRoute
+    }
+    '/_authenticated/chats/$threadId': {
+      id: '/_authenticated/chats/$threadId'
+      path: '/$threadId'
+      fullPath: '/chats/$threadId'
+      preLoaderRoute: typeof AuthenticatedChatsThreadIdRouteImport
+      parentRoute: typeof AuthenticatedChatsRoute
+    }
   }
 }
 
+interface AuthenticatedChatsRouteChildren {
+  AuthenticatedChatsThreadIdRoute: typeof AuthenticatedChatsThreadIdRoute
+  AuthenticatedChatsIndexRoute: typeof AuthenticatedChatsIndexRoute
+}
+
+const AuthenticatedChatsRouteChildren: AuthenticatedChatsRouteChildren = {
+  AuthenticatedChatsThreadIdRoute: AuthenticatedChatsThreadIdRoute,
+  AuthenticatedChatsIndexRoute: AuthenticatedChatsIndexRoute,
+}
+
+const AuthenticatedChatsRouteWithChildren =
+  AuthenticatedChatsRoute._addFileChildren(AuthenticatedChatsRouteChildren)
+
+interface AuthenticatedRouteRouteChildren {
+  AuthenticatedChatsRoute: typeof AuthenticatedChatsRouteWithChildren
+}
+
+const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedChatsRoute: AuthenticatedChatsRouteWithChildren,
+}
+
+const AuthenticatedRouteRouteWithChildren =
+  AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  ShareTokenRoute: ShareTokenRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

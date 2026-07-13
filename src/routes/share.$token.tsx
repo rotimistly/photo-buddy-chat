@@ -4,6 +4,15 @@ import { MessageCircleHeart } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 
+type SharedMessage = {
+  id: string;
+  content: string | null;
+  image_url: string | null;
+  created_at: string;
+  sender: string;
+  sender_id: string;
+};
+
 export const Route = createFileRoute("/share/$token")({
   loader: async ({ params }) => {
     const data = await getSharedConversation({ data: { token: params.token } });
@@ -64,7 +73,7 @@ function SharedView() {
           {data.messages.length === 0 && (
             <p className="text-sm text-muted-foreground">No messages yet.</p>
           )}
-          {data.messages.map((m, i) => {
+          {data.messages.map((m: SharedMessage) => {
             const isOwner = m.sender_id === data.owner_id;
             return (
               <div key={m.id} className={cn("flex gap-3", !isOwner && "flex-row-reverse")}>
@@ -90,8 +99,6 @@ function SharedView() {
               </div>
             );
           })}
-          {/* touch i to satisfy noUnused if strict */}
-          <div className="hidden">{data.messages.length}</div>
         </div>
       </section>
     </main>
