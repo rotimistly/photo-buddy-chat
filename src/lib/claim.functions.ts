@@ -34,10 +34,22 @@ export const claimUser = createServerFn({ method: "POST" })
     if (!claimed) throw new Error("This user has already been assigned.");
 
     // Create their conversation
-    const { error: convErr } = await supabaseAdmin
+    const { data: conv, error: convErr } = await supabaseAdmin
       .from("conversations")
-      .insert({ user_id: data.userId, owner_admin_id: context.userId });
+      .insert({ user_id: data.userId, owner_admin_id: context.userId })
+      .select("id")
+      .maybeSingle();
     if (convErr && !convErr.message.includes("duplicate")) throw new Error(convErr.message);
+
+    const { writeAuditLog } = await import("./audit.server");
+    await writeAuditLog({
+      actor_admin_id: context.userId,
+      action: "conversation.claim",
+      target_type: "conversation",
+      target_id: conv?.id ?? null,
+      target_owner_admin_id: context.userId,
+      metadata: { claimed_user_id: data.userId },
+    });
 
     return { ok: true };
   });
