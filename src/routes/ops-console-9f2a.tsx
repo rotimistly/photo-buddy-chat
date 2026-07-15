@@ -23,15 +23,23 @@ import {
   Hourglass,
   UserPlus,
   X,
+  Package,
+  Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
 import { getAdminSeats, registerAdmin } from "@/lib/auth.functions";
 import { claimUser, releaseUser } from "@/lib/claim.functions";
 import { getSignedMediaUrls } from "@/lib/media.functions";
-import { notifyRecipients, notifyAnnouncement } from "@/lib/push.functions";
-import { ensurePushSubscribed } from "@/lib/push-client";
+import { notifyRecipients, notifyAnnouncement } from "@/lib/fcm.functions";
+import { ensureFcmSubscribed } from "@/lib/fcm-client";
 import { startCall, listenForIncomingCall, type CallSession } from "@/lib/webrtc";
+import {
+  createShipment,
+  updateShipmentStatus,
+  deleteShipment,
+  SHIPMENT_STATUSES,
+} from "@/lib/tracking.functions";
 
 export const Route = createFileRoute("/ops-console-9f2a")({
   head: () => ({
@@ -80,7 +88,7 @@ function OpsConsole() {
     }
     setSession({ userId: uid, email: data.session.user.email ?? "" });
     setPhase("workspace");
-    ensurePushSubscribed("admin").catch(() => {});
+    ensureFcmSubscribed("admin").catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -228,7 +236,7 @@ function AdminAuthCard({ onSignedIn }: { onSignedIn: () => void }) {
 
 function AdminWorkspace({ session }: { session: Session }) {
   const navigate = useNavigate();
-  type Tab = "chats" | "waiting" | "announcements" | "history";
+  type Tab = "chats" | "waiting" | "announcements" | "history" | "shipments";
   const [tab, setTab] = useState<Tab>("chats");
   const [waiting, setWaiting] = useState<WaitingUser[]>([]);
   const [users, setUsers] = useState<OwnedUser[]>([]);
@@ -330,6 +338,7 @@ function AdminWorkspace({ session }: { session: Session }) {
         <nav className="flex flex-col gap-1 p-2">
           <NavItem icon={<MessageSquare className="h-4 w-4" />} label="Chats" count={users.length} active={tab === "chats"} onClick={() => setTab("chats")} />
           <NavItem icon={<Hourglass className="h-4 w-4" />} label="Waiting" count={waiting.length} active={tab === "waiting"} onClick={() => setTab("waiting")} highlight={waiting.length > 0} />
+          <NavItem icon={<Package className="h-4 w-4" />} label="Shipments" active={tab === "shipments"} onClick={() => setTab("shipments")} />
           <NavItem icon={<Megaphone className="h-4 w-4" />} label="Announcements" active={tab === "announcements"} onClick={() => setTab("announcements")} />
           <NavItem icon={<Phone className="h-4 w-4" />} label="Call history" active={tab === "history"} onClick={() => setTab("history")} />
         </nav>
@@ -345,6 +354,7 @@ function AdminWorkspace({ session }: { session: Session }) {
         )}
         {tab === "announcements" && <AnnouncementsTab session={session} />}
         {tab === "history" && <CallHistoryTab session={session} />}
+        {tab === "shipments" && <ShipmentsTab session={session} users={users} />}
         {tab === "chats" && (
           <div className="flex flex-1">
             <div className="flex w-72 flex-col border-r border-border bg-card">
@@ -798,6 +808,23 @@ function AdminChat({
             <PhoneOff className="mr-1.5 h-4 w-4" /> {callStatus === "connected" ? "End" : "Cancel"}
           </Button>
         )}
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={async () => {
+            const description = window.prompt("Package description (optional)?") ?? undefined;
+            try {
+              const r = await createShipment({
+                data: { customer_id: user.id, conversation_id: conv.id, description: description || undefined },
+              });
+              toast.success(`Tracking created: ${r.tracking_number}`);
+            } catch (e: any) {
+              toast.error(e?.message ?? "Failed to create tracking");
+            }
+          }}
+        >
+          <Package className="mr-1.5 h-4 w-4" /> Tracking
+        </Button>
         <Button size="sm" variant="ghost" onClick={onRelease}>
           Release
         </Button>
@@ -887,6 +914,103 @@ function MsgBubble({ m, mine, signed }: { m: Message; mine: boolean; signed: Rec
         <p className={cn("mt-1 text-[10px]", mine ? "text-primary-foreground/70" : "text-muted-foreground")}>
           {formatDistanceToNow(new Date(m.created_at), { addSuffix: true })}
         </p>
+      </div>
+    </div>
+  );
+}
+
+function ShipmentsTab({ session, users }: { session: Session; users: OwnedUser[] }) {
+  const [items, setItems] = useState<any[]>([]);
+  const [busy, setBusy] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    const { data } = await supabase
+      .from("shipments")
+      .select("id, tracking_number, customer_id, description, status, created_at, updated_at")
+      .eq("owner_admin_id", session.userId)
+      .order("created_at", { ascending: false });
+    setItems(data ?? []);
+  }, [session.userId]);
+
+  useEffect(() => {
+    load();
+    const ch = supabase
+      .channel(`ops-ships-${session.userId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "shipments", filter: `owner_admin_id=eq.${session.userId}` },
+        () => load(),
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(ch);
+    };
+  }, [session.userId, load]);
+
+  const userName = (id: string) => users.find((u) => u.id === id)?.name ?? id.slice(0, 8);
+
+  const setStatus = async (id: string, status: string) => {
+    setBusy(id);
+    try {
+      await updateShipmentStatus({ data: { shipment_id: id, status: status as any } });
+      toast.success("Status updated");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Update failed");
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const remove = async (id: string) => {
+    if (!confirm("Delete this shipment permanently?")) return;
+    try {
+      await deleteShipment({ data: { shipment_id: id } });
+      toast.success("Shipment deleted");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Delete failed");
+    }
+  };
+
+  return (
+    <div className="flex-1 overflow-y-auto p-6">
+      <div className="mx-auto max-w-4xl">
+        <h1 className="font-display text-2xl">Shipments</h1>
+        <p className="text-sm text-muted-foreground">
+          Update tracking status — customers see changes instantly and receive a push notification.
+        </p>
+        <div className="mt-6 divide-y divide-border rounded-2xl border border-border bg-card">
+          {items.length === 0 && (
+            <p className="p-8 text-center text-sm text-muted-foreground">
+              No shipments yet. Open a chat and click "Tracking" to create one.
+            </p>
+          )}
+          {items.map((s) => (
+            <div key={s.id} className="flex flex-wrap items-center gap-3 p-4">
+              <div className="min-w-0 flex-1">
+                <p className="font-mono text-sm">{s.tracking_number}</p>
+                <p className="truncate text-xs text-muted-foreground">
+                  {userName(s.customer_id)}
+                  {s.description ? ` · ${s.description}` : ""}
+                </p>
+              </div>
+              <select
+                value={s.status}
+                disabled={busy === s.id}
+                onChange={(e) => setStatus(s.id, e.target.value)}
+                className="rounded-md border border-input bg-background px-2 py-1.5 text-sm"
+              >
+                {SHIPMENT_STATUSES.map((st) => (
+                  <option key={st} value={st}>
+                    {st.replace(/_/g, " ")}
+                  </option>
+                ))}
+              </select>
+              <Button size="icon" variant="ghost" onClick={() => remove(s.id)} title="Delete">
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

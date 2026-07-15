@@ -148,6 +148,39 @@ export type Database = {
         }
         Relationships: []
       }
+      fcm_tokens: {
+        Row: {
+          created_at: string
+          device_info: Json | null
+          id: string
+          last_seen_at: string
+          owner_admin_id: string | null
+          role: string
+          token: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          device_info?: Json | null
+          id?: string
+          last_seen_at?: string
+          owner_admin_id?: string | null
+          role: string
+          token: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          device_info?: Json | null
+          id?: string
+          last_seen_at?: string
+          owner_admin_id?: string | null
+          role?: string
+          token?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       messages: {
         Row: {
           content: string | null
@@ -231,35 +264,108 @@ export type Database = {
         }
         Relationships: []
       }
-      push_subscriptions: {
+      shipment_events: {
         Row: {
           created_at: string
-          endpoint: string
+          created_by: string | null
           id: string
-          owner_admin_id: string | null
-          role: string
-          subscription: Json
-          user_id: string | null
+          location: string | null
+          note: string | null
+          shipment_id: string
+          step: Database["public"]["Enums"]["shipment_status"]
         }
         Insert: {
           created_at?: string
-          endpoint: string
+          created_by?: string | null
           id?: string
-          owner_admin_id?: string | null
-          role: string
-          subscription: Json
-          user_id?: string | null
+          location?: string | null
+          note?: string | null
+          shipment_id: string
+          step: Database["public"]["Enums"]["shipment_status"]
         }
         Update: {
           created_at?: string
-          endpoint?: string
+          created_by?: string | null
           id?: string
-          owner_admin_id?: string | null
-          role?: string
-          subscription?: Json
-          user_id?: string | null
+          location?: string | null
+          note?: string | null
+          shipment_id?: string
+          step?: Database["public"]["Enums"]["shipment_status"]
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "shipment_events_shipment_id_fkey"
+            columns: ["shipment_id"]
+            isOneToOne: false
+            referencedRelation: "shipments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shipments: {
+        Row: {
+          conversation_id: string | null
+          courier: string | null
+          created_at: string
+          customer_id: string
+          description: string | null
+          destination: string | null
+          estimated_delivery: string | null
+          id: string
+          origin: string | null
+          owner_admin_id: string
+          receiver_name: string | null
+          sender_name: string | null
+          status: Database["public"]["Enums"]["shipment_status"]
+          tracking_number: string
+          updated_at: string
+          weight: string | null
+        }
+        Insert: {
+          conversation_id?: string | null
+          courier?: string | null
+          created_at?: string
+          customer_id: string
+          description?: string | null
+          destination?: string | null
+          estimated_delivery?: string | null
+          id?: string
+          origin?: string | null
+          owner_admin_id: string
+          receiver_name?: string | null
+          sender_name?: string | null
+          status?: Database["public"]["Enums"]["shipment_status"]
+          tracking_number: string
+          updated_at?: string
+          weight?: string | null
+        }
+        Update: {
+          conversation_id?: string | null
+          courier?: string | null
+          created_at?: string
+          customer_id?: string
+          description?: string | null
+          destination?: string | null
+          estimated_delivery?: string | null
+          id?: string
+          origin?: string | null
+          owner_admin_id?: string
+          receiver_name?: string | null
+          sender_name?: string | null
+          status?: Database["public"]["Enums"]["shipment_status"]
+          tracking_number?: string
+          updated_at?: string
+          weight?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shipments_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
@@ -291,6 +397,18 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "user"
+      shipment_status:
+        | "order_created"
+        | "package_received"
+        | "processing"
+        | "dispatched"
+        | "export_customs"
+        | "international_transit"
+        | "import_customs"
+        | "local_distribution"
+        | "out_for_delivery"
+        | "delivered"
+        | "paused"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -419,6 +537,19 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "user"],
+      shipment_status: [
+        "order_created",
+        "package_received",
+        "processing",
+        "dispatched",
+        "export_customs",
+        "international_transit",
+        "import_customs",
+        "local_distribution",
+        "out_for_delivery",
+        "delivered",
+        "paused",
+      ],
     },
   },
 } as const
