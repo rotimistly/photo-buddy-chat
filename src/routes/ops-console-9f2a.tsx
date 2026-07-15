@@ -354,6 +354,7 @@ function AdminWorkspace({ session }: { session: Session }) {
         )}
         {tab === "announcements" && <AnnouncementsTab session={session} />}
         {tab === "history" && <CallHistoryTab session={session} />}
+        {tab === "shipments" && <ShipmentsTab session={session} users={users} />}
         {tab === "chats" && (
           <div className="flex flex-1">
             <div className="flex w-72 flex-col border-r border-border bg-card">
@@ -807,6 +808,23 @@ function AdminChat({
             <PhoneOff className="mr-1.5 h-4 w-4" /> {callStatus === "connected" ? "End" : "Cancel"}
           </Button>
         )}
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={async () => {
+            const description = window.prompt("Package description (optional)?") ?? undefined;
+            try {
+              const r = await createShipment({
+                data: { customer_id: user.id, conversation_id: conv.id, description: description || undefined },
+              });
+              toast.success(`Tracking created: ${r.tracking_number}`);
+            } catch (e: any) {
+              toast.error(e?.message ?? "Failed to create tracking");
+            }
+          }}
+        >
+          <Package className="mr-1.5 h-4 w-4" /> Tracking
+        </Button>
         <Button size="sm" variant="ghost" onClick={onRelease}>
           Release
         </Button>
