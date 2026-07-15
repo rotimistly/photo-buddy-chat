@@ -918,3 +918,100 @@ function MsgBubble({ m, mine, signed }: { m: Message; mine: boolean; signed: Rec
     </div>
   );
 }
+
+function ShipmentsTab({ session, users }: { session: Session; users: OwnedUser[] }) {
+  const [items, setItems] = useState<any[]>([]);
+  const [busy, setBusy] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    const { data } = await supabase
+      .from("shipments")
+      .select("id, tracking_number, customer_id, description, status, created_at, updated_at")
+      .eq("owner_admin_id", session.userId)
+      .order("created_at", { ascending: false });
+    setItems(data ?? []);
+  }, [session.userId]);
+
+  useEffect(() => {
+    load();
+    const ch = supabase
+      .channel(`ops-ships-${session.userId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "shipments", filter: `owner_admin_id=eq.${session.userId}` },
+        () => load(),
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(ch);
+    };
+  }, [session.userId, load]);
+
+  const userName = (id: string) => users.find((u) => u.id === id)?.name ?? id.slice(0, 8);
+
+  const setStatus = async (id: string, status: string) => {
+    setBusy(id);
+    try {
+      await updateShipmentStatus({ data: { shipment_id: id, status: status as any } });
+      toast.success("Status updated");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Update failed");
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const remove = async (id: string) => {
+    if (!confirm("Delete this shipment permanently?")) return;
+    try {
+      await deleteShipment({ data: { shipment_id: id } });
+      toast.success("Shipment deleted");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Delete failed");
+    }
+  };
+
+  return (
+    <div className="flex-1 overflow-y-auto p-6">
+      <div className="mx-auto max-w-4xl">
+        <h1 className="font-display text-2xl">Shipments</h1>
+        <p className="text-sm text-muted-foreground">
+          Update tracking status — customers see changes instantly and receive a push notification.
+        </p>
+        <div className="mt-6 divide-y divide-border rounded-2xl border border-border bg-card">
+          {items.length === 0 && (
+            <p className="p-8 text-center text-sm text-muted-foreground">
+              No shipments yet. Open a chat and click "Tracking" to create one.
+            </p>
+          )}
+          {items.map((s) => (
+            <div key={s.id} className="flex flex-wrap items-center gap-3 p-4">
+              <div className="min-w-0 flex-1">
+                <p className="font-mono text-sm">{s.tracking_number}</p>
+                <p className="truncate text-xs text-muted-foreground">
+                  {userName(s.customer_id)}
+                  {s.description ? ` · ${s.description}` : ""}
+                </p>
+              </div>
+              <select
+                value={s.status}
+                disabled={busy === s.id}
+                onChange={(e) => setStatus(s.id, e.target.value)}
+                className="rounded-md border border-input bg-background px-2 py-1.5 text-sm"
+              >
+                {SHIPMENT_STATUSES.map((st) => (
+                  <option key={st} value={st}>
+                    {st.replace(/_/g, " ")}
+                  </option>
+                ))}
+              </select>
+              <Button size="icon" variant="ghost" onClick={() => remove(s.id)} title="Delete">
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
