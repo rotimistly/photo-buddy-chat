@@ -29,8 +29,8 @@ import { formatDistanceToNow } from "date-fns";
 import { getAdminSeats, registerAdmin } from "@/lib/auth.functions";
 import { claimUser, releaseUser } from "@/lib/claim.functions";
 import { getSignedMediaUrls } from "@/lib/media.functions";
-import { notifyRecipients, notifyAnnouncement } from "@/lib/push.functions";
-import { ensurePushSubscribed } from "@/lib/push-client";
+import { notifyRecipients, notifyAnnouncement } from "@/lib/fcm.functions";
+import { ensureFcmSubscribed } from "@/lib/fcm-client";
 import { startCall, listenForIncomingCall, type CallSession } from "@/lib/webrtc";
 
 export const Route = createFileRoute("/ops-console-9f2a")({
@@ -80,7 +80,7 @@ function OpsConsole() {
     }
     setSession({ userId: uid, email: data.session.user.email ?? "" });
     setPhase("workspace");
-    ensurePushSubscribed("admin").catch(() => {});
+    ensureFcmSubscribed("admin").catch(() => {});
   }, []);
 
   useEffect(() => {

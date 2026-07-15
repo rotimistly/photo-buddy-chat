@@ -18,12 +18,12 @@ export const saveFcmToken = createServerFn({ method: "POST" })
       role: data.kind,
       user_id: data.kind === "user" ? context.userId : null,
       owner_admin_id: data.kind === "admin" ? context.userId : null,
-      device_info: data.device_info ?? {},
+      device_info: (data.device_info ?? {}) as never,
       last_seen_at: new Date().toISOString(),
     };
     const { error } = await supabaseAdmin
       .from("fcm_tokens")
-      .upsert(row, { onConflict: "token" });
+      .upsert(row as never, { onConflict: "token" });
     if (error) throw new Error(error.message);
     return { ok: true };
   });
