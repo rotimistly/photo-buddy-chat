@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,7 @@ import {
   Phone,
   PhoneOff,
   Megaphone,
+  Package,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -390,6 +391,11 @@ function ChatPage() {
         onSignOut={signOut}
         right={
           <>
+            <Link to="/tracking" title="Package tracking">
+              <Button variant="outline" size="sm" type="button">
+                <Package className="mr-1.5 h-4 w-4" /> Tracking
+              </Button>
+            </Link>
             {!call && (
               <Button variant="outline" size="sm" onClick={beginCall}>
                 <Phone className="mr-1.5 h-4 w-4" /> Call
