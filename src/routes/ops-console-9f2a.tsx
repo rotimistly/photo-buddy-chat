@@ -23,6 +23,8 @@ import {
   Hourglass,
   UserPlus,
   X,
+  Package,
+  Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
@@ -32,6 +34,12 @@ import { getSignedMediaUrls } from "@/lib/media.functions";
 import { notifyRecipients, notifyAnnouncement } from "@/lib/fcm.functions";
 import { ensureFcmSubscribed } from "@/lib/fcm-client";
 import { startCall, listenForIncomingCall, type CallSession } from "@/lib/webrtc";
+import {
+  createShipment,
+  updateShipmentStatus,
+  deleteShipment,
+  SHIPMENT_STATUSES,
+} from "@/lib/tracking.functions";
 
 export const Route = createFileRoute("/ops-console-9f2a")({
   head: () => ({
@@ -228,7 +236,7 @@ function AdminAuthCard({ onSignedIn }: { onSignedIn: () => void }) {
 
 function AdminWorkspace({ session }: { session: Session }) {
   const navigate = useNavigate();
-  type Tab = "chats" | "waiting" | "announcements" | "history";
+  type Tab = "chats" | "waiting" | "announcements" | "history" | "shipments";
   const [tab, setTab] = useState<Tab>("chats");
   const [waiting, setWaiting] = useState<WaitingUser[]>([]);
   const [users, setUsers] = useState<OwnedUser[]>([]);
@@ -330,6 +338,7 @@ function AdminWorkspace({ session }: { session: Session }) {
         <nav className="flex flex-col gap-1 p-2">
           <NavItem icon={<MessageSquare className="h-4 w-4" />} label="Chats" count={users.length} active={tab === "chats"} onClick={() => setTab("chats")} />
           <NavItem icon={<Hourglass className="h-4 w-4" />} label="Waiting" count={waiting.length} active={tab === "waiting"} onClick={() => setTab("waiting")} highlight={waiting.length > 0} />
+          <NavItem icon={<Package className="h-4 w-4" />} label="Shipments" active={tab === "shipments"} onClick={() => setTab("shipments")} />
           <NavItem icon={<Megaphone className="h-4 w-4" />} label="Announcements" active={tab === "announcements"} onClick={() => setTab("announcements")} />
           <NavItem icon={<Phone className="h-4 w-4" />} label="Call history" active={tab === "history"} onClick={() => setTab("history")} />
         </nav>
