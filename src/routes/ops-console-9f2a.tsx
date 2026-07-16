@@ -35,10 +35,7 @@ import { CallControls, IncomingCallDialog } from "@/components/call-ui";
 
 export const Route = createFileRoute("/ops-console-9f2a")({
   head: () => ({
-    meta: [
-      { title: "Ops Console" },
-      { name: "robots", content: "noindex, nofollow" },
-    ],
+    meta: [{ title: "Ops Console" }, { name: "robots", content: "noindex, nofollow" }],
   }),
   component: OpsConsole,
 });
@@ -100,7 +97,9 @@ function OpsConsole() {
       <div className="grid min-h-screen place-items-center bg-background px-6">
         <div className="max-w-sm text-center">
           <h1 className="font-display text-3xl">Access Denied.</h1>
-          <p className="mt-3 text-sm text-muted-foreground">Your account is not an administrator.</p>
+          <p className="mt-3 text-sm text-muted-foreground">
+            Your account is not an administrator.
+          </p>
           <Button
             className="mt-6"
             onClick={async () => {
@@ -130,7 +129,9 @@ function AdminAuthCard({ onSignedIn }: { onSignedIn: () => void }) {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    getAdminSeats().then(setSeats).catch(() => setSeats({ used: 0, remaining: 2 }));
+    getAdminSeats()
+      .then(setSeats)
+      .catch(() => setSeats({ used: 0, remaining: 2 }));
   }, []);
 
   useEffect(() => {
@@ -204,16 +205,37 @@ function AdminAuthCard({ onSignedIn }: { onSignedIn: () => void }) {
             {tab === "create" && (
               <div className="space-y-1.5">
                 <Label htmlFor="admin-name">Name</Label>
-                <Input id="admin-name" value={name} onChange={(e) => setName(e.target.value)} required maxLength={40} />
+                <Input
+                  id="admin-name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required
+                  maxLength={40}
+                />
               </div>
             )}
             <div className="space-y-1.5">
               <Label htmlFor="admin-email">Email</Label>
-              <Input id="admin-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" />
+              <Input
+                id="admin-email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                autoComplete="email"
+              />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="admin-pw">Password</Label>
-              <Input id="admin-pw" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} autoComplete={tab === "signin" ? "current-password" : "new-password"} />
+              <Input
+                id="admin-pw"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                minLength={8}
+                autoComplete={tab === "signin" ? "current-password" : "new-password"}
+              />
             </div>
             <Button type="submit" className="w-full" disabled={busy}>
               {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -248,16 +270,31 @@ function AdminWorkspace({ session }: { session: Session }) {
 
   const loadUsers = useCallback(async () => {
     const [{ data: w }, { data: mine }, { data: cs }] = await Promise.all([
-      supabase.from("profiles").select("id, name, four_digit_id, created_at").is("assigned_admin_id", null).eq("is_admin", false).order("created_at", { ascending: true }),
-      supabase.from("profiles").select("id, name, four_digit_id, created_at").eq("assigned_admin_id", session.userId).order("created_at", { ascending: false }),
-      supabase.from("conversations").select("id, user_id, owner_admin_id").eq("owner_admin_id", session.userId),
+      supabase
+        .from("profiles")
+        .select("id, name, four_digit_id, created_at")
+        .is("assigned_admin_id", null)
+        .eq("is_admin", false)
+        .order("created_at", { ascending: true }),
+      supabase
+        .from("profiles")
+        .select("id, name, four_digit_id, created_at")
+        .eq("assigned_admin_id", session.userId)
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("conversations")
+        .select("id, user_id, owner_admin_id")
+        .eq("owner_admin_id", session.userId),
     ]);
     setWaiting(w ?? []);
     setUsers(mine ?? []);
     const map: Record<string, Conversation> = {};
     (cs ?? []).forEach((c) => (map[c.user_id] = c));
     setConvs(map);
-    const { count: msgCount } = await supabase.from("messages").select("*", { head: true, count: "exact" }).eq("owner_admin_id", session.userId);
+    const { count: msgCount } = await supabase
+      .from("messages")
+      .select("*", { head: true, count: "exact" })
+      .eq("owner_admin_id", session.userId);
     setStats({ users: (mine ?? []).length, waiting: (w ?? []).length, messages: msgCount ?? 0 });
   }, [session.userId]);
 
@@ -278,11 +315,15 @@ function AdminWorkspace({ session }: { session: Session }) {
     loadAdminPeers();
     const chP = supabase
       .channel(`ops-profiles-${session.userId}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, () => loadUsers())
+      .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, () =>
+        loadUsers(),
+      )
       .subscribe();
     const chC = supabase
       .channel(`ops-convs-${session.userId}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "conversations" }, () => loadUsers())
+      .on("postgres_changes", { event: "*", schema: "public", table: "conversations" }, () =>
+        loadUsers(),
+      )
       .subscribe();
     return () => {
       supabase.removeChannel(chP);
@@ -324,7 +365,7 @@ function AdminWorkspace({ session }: { session: Session }) {
   }, [users, search]);
 
   const activeConv = activeUserId ? convs[activeUserId] : null;
-  const activeUser = activeUserId ? users.find((u) => u.id === activeUserId) ?? null : null;
+  const activeUser = activeUserId ? (users.find((u) => u.id === activeUserId) ?? null) : null;
 
   return (
     <div className="flex h-screen bg-background">
@@ -344,17 +385,45 @@ function AdminWorkspace({ session }: { session: Session }) {
           </Button>
         </div>
         <nav className="flex flex-col gap-1 p-2">
-          <NavItem icon={<MessageSquare className="h-4 w-4" />} label="Chats" count={users.length} active={tab === "chats"} onClick={() => setTab("chats")} />
-          <NavItem icon={<Hourglass className="h-4 w-4" />} label="Waiting" count={waiting.length} active={tab === "waiting"} onClick={() => setTab("waiting")} highlight={waiting.length > 0} />
-          <NavItem icon={<Megaphone className="h-4 w-4" />} label="Announcements" active={tab === "announcements"} onClick={() => setTab("announcements")} />
-          <NavItem icon={<Phone className="h-4 w-4" />} label="Call history" active={tab === "history"} onClick={() => setTab("history")} />
+          <NavItem
+            icon={<MessageSquare className="h-4 w-4" />}
+            label="Chats"
+            count={users.length}
+            active={tab === "chats"}
+            onClick={() => setTab("chats")}
+          />
+          <NavItem
+            icon={<Hourglass className="h-4 w-4" />}
+            label="Waiting"
+            count={waiting.length}
+            active={tab === "waiting"}
+            onClick={() => setTab("waiting")}
+            highlight={waiting.length > 0}
+          />
+          <NavItem
+            icon={<Megaphone className="h-4 w-4" />}
+            label="Announcements"
+            active={tab === "announcements"}
+            onClick={() => setTab("announcements")}
+          />
+          <NavItem
+            icon={<Phone className="h-4 w-4" />}
+            label="Call history"
+            active={tab === "history"}
+            onClick={() => setTab("history")}
+          />
         </nav>
         {adminPeers.length > 0 && (
           <div className="border-t border-border p-3">
-            <p className="mb-2 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Admin peers</p>
+            <p className="mb-2 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+              Admin peers
+            </p>
             <ul className="space-y-1">
               {adminPeers.map((p) => (
-                <li key={p.id} className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent/60">
+                <li
+                  key={p.id}
+                  className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent/60"
+                >
                   <div className="grid h-6 w-6 place-items-center rounded-full bg-accent text-[10px] font-medium">
                     {p.name.charAt(0).toUpperCase()}
                   </div>
@@ -375,14 +444,22 @@ function AdminWorkspace({ session }: { session: Session }) {
           </div>
         )}
         <div className="border-t border-border p-4 text-xs text-muted-foreground">
-          <p><Users className="mr-1 inline h-3 w-3" /> {stats.users} users</p>
-          <p><MessageSquare className="mr-1 inline h-3 w-3" /> {stats.messages} messages</p>
+          <p>
+            <Users className="mr-1 inline h-3 w-3" /> {stats.users} users
+          </p>
+          <p>
+            <MessageSquare className="mr-1 inline h-3 w-3" /> {stats.messages} messages
+          </p>
         </div>
       </aside>
 
       <main className="flex flex-1 flex-col">
         <div ref={voice.audioContainerRef} className="hidden" aria-hidden />
-        <IncomingCallDialog incoming={voice.incoming} onAccept={voice.accept} onDecline={voice.decline} />
+        <IncomingCallDialog
+          incoming={voice.incoming}
+          onAccept={voice.accept}
+          onDecline={voice.decline}
+        />
         {voice.inCall && (
           <div className="border-b border-border bg-card/60 px-4 py-2">
             <div className="mx-auto flex max-w-3xl items-center justify-end">
@@ -404,13 +481,20 @@ function AdminWorkspace({ session }: { session: Session }) {
               <div className="border-b border-border p-3">
                 <div className="relative">
                   <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search my users" className="pl-8" />
+                  <Input
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Search my users"
+                    className="pl-8"
+                  />
                 </div>
               </div>
               <div className="flex-1 overflow-y-auto p-2">
                 {filteredUsers.length === 0 && (
                   <p className="p-6 text-center text-sm text-muted-foreground">
-                    {users.length === 0 ? "No claimed users yet. Check the Waiting tab." : "No matches."}
+                    {users.length === 0
+                      ? "No claimed users yet. Check the Waiting tab."
+                      : "No matches."}
                   </p>
                 )}
                 {filteredUsers.map((u) => (
@@ -503,10 +587,14 @@ function WaitingTab({
     <div className="flex-1 overflow-y-auto p-6">
       <div className="mx-auto max-w-3xl">
         <h1 className="font-display text-2xl">Waiting users</h1>
-        <p className="text-sm text-muted-foreground">First to claim wins. Once claimed, only you can access that user.</p>
+        <p className="text-sm text-muted-foreground">
+          First to claim wins. Once claimed, only you can access that user.
+        </p>
         <div className="mt-6 divide-y divide-border rounded-2xl border border-border bg-card">
           {waiting.length === 0 && (
-            <p className="p-8 text-center text-sm text-muted-foreground">Nobody waiting right now.</p>
+            <p className="p-8 text-center text-sm text-muted-foreground">
+              Nobody waiting right now.
+            </p>
           )}
           {waiting.map((u) => (
             <div key={u.id} className="flex items-center gap-3 p-4">
@@ -516,7 +604,8 @@ function WaitingTab({
               <div className="min-w-0 flex-1">
                 <p className="truncate font-medium">{u.name}</p>
                 <p className="text-xs text-muted-foreground">
-                  #{u.four_digit_id} · registered {formatDistanceToNow(new Date(u.created_at), { addSuffix: true })}
+                  #{u.four_digit_id} · registered{" "}
+                  {formatDistanceToNow(new Date(u.created_at), { addSuffix: true })}
                 </p>
               </div>
               <Button size="sm" onClick={() => onClaim(u.id)}>
@@ -578,7 +667,12 @@ function AnnouncementsTab({ session }: { session: Session }) {
         <h1 className="font-display text-2xl">Announcements</h1>
         <p className="text-sm text-muted-foreground">Only visible to your assigned users.</p>
         <form onSubmit={post} className="mt-5 space-y-2">
-          <Textarea value={text} onChange={(e) => setText(e.target.value)} placeholder="Post an update to your users…" maxLength={2000} />
+          <Textarea
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            placeholder="Post an update to your users…"
+            maxLength={2000}
+          />
           <Button type="submit" disabled={busy || !text.trim()}>
             {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Post announcement
           </Button>
@@ -694,7 +788,12 @@ function AdminChat({
       .channel(`aconv-${conv.id}`)
       .on(
         "postgres_changes",
-        { event: "INSERT", schema: "public", table: "messages", filter: `conversation_id=eq.${conv.id}` },
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "messages",
+          filter: `conversation_id=eq.${conv.id}`,
+        },
         () => loadMessages(),
       )
       .subscribe();
@@ -725,7 +824,9 @@ function AdminChat({
       setText(body);
       return;
     }
-    notifyRecipients({ data: { conversationId: conv.id, kind: "message", preview: body.slice(0, 120) } }).catch(() => {});
+    notifyRecipients({
+      data: { conversationId: conv.id, kind: "message", preview: body.slice(0, 120) },
+    }).catch(() => {});
   };
 
   const uploadFile = async (file: File, kind: "image" | "voice" | "file") => {
@@ -736,7 +837,9 @@ function AdminChat({
     const ext = file.name.split(".").pop() || (kind === "voice" ? "webm" : "bin");
     const path = `${session.userId}/${conv.id}/${Date.now()}-${crypto.randomUUID()}.${ext}`;
     setSending(true);
-    const { error: upErr } = await supabase.storage.from("chat-photos").upload(path, file, { contentType: file.type });
+    const { error: upErr } = await supabase.storage
+      .from("chat-photos")
+      .upload(path, file, { contentType: file.type });
     if (upErr) {
       toast.error(upErr.message);
       setSending(false);
@@ -770,7 +873,10 @@ function AdminChat({
       rec.onstop = async () => {
         stream.getTracks().forEach((t) => t.stop());
         const blob = new Blob(chunks, { type: "audio/webm" });
-        await uploadFile(new File([blob], `voice-${Date.now()}.webm`, { type: "audio/webm" }), "voice");
+        await uploadFile(
+          new File([blob], `voice-${Date.now()}.webm`, { type: "audio/webm" }),
+          "voice",
+        );
       };
       rec.start();
       recRef.current = rec;
@@ -808,7 +914,9 @@ function AdminChat({
             <MsgBubble key={m.id} m={m} mine={m.sender_id === session.userId} signed={signed} />
           ))}
           {messages.length === 0 && (
-            <p className="py-16 text-center text-sm text-muted-foreground">No messages yet. Say hello.</p>
+            <p className="py-16 text-center text-sm text-muted-foreground">
+              No messages yet. Say hello.
+            </p>
           )}
         </div>
       </div>
@@ -825,11 +933,23 @@ function AdminChat({
               e.target.value = "";
             }}
           />
-          <Button type="button" variant="outline" size="icon" onClick={() => fileRef.current?.click()} disabled={sending}>
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            onClick={() => fileRef.current?.click()}
+            disabled={sending}
+          >
             <ImageIcon className="h-4 w-4" />
           </Button>
           {!recording ? (
-            <Button type="button" variant="outline" size="icon" onClick={startRec} disabled={sending}>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              onClick={startRec}
+              disabled={sending}
+            >
               <Mic className="h-4 w-4" />
             </Button>
           ) : (
@@ -837,7 +957,12 @@ function AdminChat({
               <Square className="h-4 w-4" />
             </Button>
           )}
-          <Input value={text} onChange={(e) => setText(e.target.value)} placeholder="Reply…" disabled={sending || recording} />
+          <Input
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            placeholder="Reply…"
+            disabled={sending || recording}
+          />
           <Button type="submit" size="icon" disabled={sending || !text.trim()}>
             {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
           </Button>
@@ -847,20 +972,34 @@ function AdminChat({
   );
 }
 
-function MsgBubble({ m, mine, signed }: { m: Message; mine: boolean; signed: Record<string, string> }) {
+function MsgBubble({
+  m,
+  mine,
+  signed,
+}: {
+  m: Message;
+  mine: boolean;
+  signed: Record<string, string>;
+}) {
   const url = m.media_path ? signed[m.media_path] : null;
   return (
     <div className={cn("flex", mine && "justify-end")}>
       <div
         className={cn(
           "max-w-[80%] rounded-2xl px-4 py-2.5 text-sm",
-          mine ? "bg-primary text-primary-foreground rounded-br-sm" : "bg-muted text-foreground rounded-bl-sm",
+          mine
+            ? "bg-primary text-primary-foreground rounded-br-sm"
+            : "bg-muted text-foreground rounded-bl-sm",
         )}
       >
         {m.content && <p className="whitespace-pre-wrap break-words">{m.content}</p>}
         {m.media_kind === "image" && url && (
           <a href={url} target="_blank" rel="noreferrer">
-            <img src={url} alt="attachment" className={cn("max-h-80 rounded-lg", m.content && "mt-2")} />
+            <img
+              src={url}
+              alt="attachment"
+              className={cn("max-h-80 rounded-lg", m.content && "mt-2")}
+            />
           </a>
         )}
         {m.media_kind === "voice" && url && <audio src={url} controls className="mt-1 w-56" />}
@@ -869,7 +1008,12 @@ function MsgBubble({ m, mine, signed }: { m: Message; mine: boolean; signed: Rec
             Download file
           </a>
         )}
-        <p className={cn("mt-1 text-[10px]", mine ? "text-primary-foreground/70" : "text-muted-foreground")}>
+        <p
+          className={cn(
+            "mt-1 text-[10px]",
+            mine ? "text-primary-foreground/70" : "text-muted-foreground",
+          )}
+        >
           {formatDistanceToNow(new Date(m.created_at), { addSuffix: true })}
         </p>
       </div>

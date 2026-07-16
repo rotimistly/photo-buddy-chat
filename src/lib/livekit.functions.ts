@@ -38,8 +38,18 @@ export const startLivekitCall = createServerFn({ method: "POST" })
 
     // Authorization: caller must share a conversation with peer, OR both must be admins.
     const [{ data: myRole }, { data: peerRole }] = await Promise.all([
-      supabaseAdmin.from("user_roles").select("role").eq("user_id", context.userId).eq("role", "admin").maybeSingle(),
-      supabaseAdmin.from("user_roles").select("role").eq("user_id", data.peer_id).eq("role", "admin").maybeSingle(),
+      supabaseAdmin
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", context.userId)
+        .eq("role", "admin")
+        .maybeSingle(),
+      supabaseAdmin
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", data.peer_id)
+        .eq("role", "admin")
+        .maybeSingle(),
     ]);
     const iAmAdmin = !!myRole;
     const peerIsAdmin = !!peerRole;
@@ -94,7 +104,12 @@ export const startLivekitCall = createServerFn({ method: "POST" })
         await sendFcmToTokens(list, {
           title: "Incoming voice call",
           body: "Tap to answer",
-          url: iAmAdmin && peerIsAdmin ? "/ops-console-9f2a" : peerIsAdmin ? "/ops-console-9f2a" : "/chat",
+          url:
+            iAmAdmin && peerIsAdmin
+              ? "/ops-console-9f2a"
+              : peerIsAdmin
+                ? "/ops-console-9f2a"
+                : "/chat",
           tag: `call-${row.id}`,
         });
       }
@@ -126,10 +141,7 @@ export const acceptLivekitCall = createServerFn({ method: "POST" })
     if (row.status === "ended" || row.status === "declined") throw new Error("Call already ended");
     if (!row.room_name) throw new Error("Call room missing");
 
-    await supabaseAdmin
-      .from("call_history")
-      .update({ status: "connected" })
-      .eq("id", data.room_id);
+    await supabaseAdmin.from("call_history").update({ status: "connected" }).eq("id", data.room_id);
 
     const token = await mintToken(context.userId, row.room_name);
     return { room_name: row.room_name, token, url: process.env.LIVEKIT_URL! };
@@ -138,7 +150,12 @@ export const acceptLivekitCall = createServerFn({ method: "POST" })
 const endInput = z.object({
   room_id: z.string().uuid(),
   status: z.enum(["ended", "declined", "missed"]).default("ended"),
-  duration_seconds: z.number().int().min(0).max(60 * 60 * 4).optional(),
+  duration_seconds: z
+    .number()
+    .int()
+    .min(0)
+    .max(60 * 60 * 4)
+    .optional(),
 });
 
 export const endLivekitCall = createServerFn({ method: "POST" })

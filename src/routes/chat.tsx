@@ -25,10 +25,7 @@ import { CallControls, IncomingCallDialog } from "@/components/call-ui";
 
 export const Route = createFileRoute("/chat")({
   head: () => ({
-    meta: [
-      { title: "Your support chat" },
-      { name: "robots", content: "noindex" },
-    ],
+    meta: [{ title: "Your support chat" }, { name: "robots", content: "noindex" }],
   }),
   component: ChatPage,
 });
@@ -157,7 +154,12 @@ function ChatPage() {
       .channel(`msg-${conv.id}`)
       .on(
         "postgres_changes",
-        { event: "INSERT", schema: "public", table: "messages", filter: `conversation_id=eq.${conv.id}` },
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "messages",
+          filter: `conversation_id=eq.${conv.id}`,
+        },
         () => loadMessages(),
       )
       .subscribe();
@@ -183,7 +185,12 @@ function ChatPage() {
       .channel(`ann-${ownerId}`)
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "announcements", filter: `owner_admin_id=eq.${ownerId}` },
+        {
+          event: "*",
+          schema: "public",
+          table: "announcements",
+          filter: `owner_admin_id=eq.${ownerId}`,
+        },
         () => load(),
       )
       .subscribe();
@@ -309,7 +316,8 @@ function ChatPage() {
           </div>
           <h1 className="mt-6 font-display text-3xl">You're in the queue</h1>
           <p className="mt-3 text-muted-foreground">
-            Your account has been created successfully. Waiting to be assigned to a support administrator. You'll be connected shortly.
+            Your account has been created successfully. Waiting to be assigned to a support
+            administrator. You'll be connected shortly.
           </p>
           <span className="mt-6 inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
             <span className="h-2 w-2 animate-pulse rounded-full bg-primary" /> Waiting
@@ -342,7 +350,11 @@ function ChatPage() {
         }
       />
       <div ref={voice.audioContainerRef} className="hidden" aria-hidden />
-      <IncomingCallDialog incoming={voice.incoming} onAccept={voice.accept} onDecline={voice.decline} />
+      <IncomingCallDialog
+        incoming={voice.incoming}
+        onAccept={voice.accept}
+        onDecline={voice.decline}
+      />
 
       {announcements[0] && (
         <div className="border-b border-border bg-accent/40 px-4 py-2 text-sm">
@@ -361,7 +373,9 @@ function ChatPage() {
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-6">
         <div className="mx-auto max-w-2xl space-y-3">
           {messages.length === 0 && (
-            <p className="py-16 text-center text-sm text-muted-foreground">Say hello — your administrator will reply here.</p>
+            <p className="py-16 text-center text-sm text-muted-foreground">
+              Say hello — your administrator will reply here.
+            </p>
           )}
           {messages.map((m) => (
             <MessageBubble key={m.id} m={m} mine={m.sender_id === userId} signed={signed} />
@@ -382,15 +396,34 @@ function ChatPage() {
               e.target.value = "";
             }}
           />
-          <Button type="button" variant="outline" size="icon" onClick={() => fileRef.current?.click()} disabled={sending}>
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            onClick={() => fileRef.current?.click()}
+            disabled={sending}
+          >
             <ImageIcon className="h-4 w-4" />
           </Button>
           {!recording ? (
-            <Button type="button" variant="outline" size="icon" onClick={startRec} disabled={sending} title="Record voice">
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              onClick={startRec}
+              disabled={sending}
+              title="Record voice"
+            >
               <Mic className="h-4 w-4" />
             </Button>
           ) : (
-            <Button type="button" variant="destructive" size="icon" onClick={stopRec} title="Stop recording">
+            <Button
+              type="button"
+              variant="destructive"
+              size="icon"
+              onClick={stopRec}
+              title="Stop recording"
+            >
               <Square className="h-4 w-4" />
             </Button>
           )}
@@ -449,13 +482,19 @@ function MessageBubble({
       <div
         className={cn(
           "max-w-[80%] rounded-2xl px-4 py-2.5 text-sm",
-          mine ? "bg-primary text-primary-foreground rounded-br-sm" : "bg-muted text-foreground rounded-bl-sm",
+          mine
+            ? "bg-primary text-primary-foreground rounded-br-sm"
+            : "bg-muted text-foreground rounded-bl-sm",
         )}
       >
         {m.content && <p className="whitespace-pre-wrap break-words">{m.content}</p>}
         {m.media_kind === "image" && url && (
           <a href={url} target="_blank" rel="noreferrer">
-            <img src={url} alt="attachment" className={cn("max-h-80 rounded-lg", m.content && "mt-2")} />
+            <img
+              src={url}
+              alt="attachment"
+              className={cn("max-h-80 rounded-lg", m.content && "mt-2")}
+            />
           </a>
         )}
         {m.media_kind === "voice" && url && <audio src={url} controls className="mt-1 w-56" />}
@@ -464,7 +503,12 @@ function MessageBubble({
             Download file
           </a>
         )}
-        <p className={cn("mt-1 text-[10px]", mine ? "text-primary-foreground/70" : "text-muted-foreground")}>
+        <p
+          className={cn(
+            "mt-1 text-[10px]",
+            mine ? "text-primary-foreground/70" : "text-muted-foreground",
+          )}
+        >
           {formatDistanceToNow(new Date(m.created_at), { addSuffix: true })}
         </p>
       </div>

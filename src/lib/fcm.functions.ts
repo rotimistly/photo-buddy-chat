@@ -62,8 +62,7 @@ export const notifyRecipients = createServerFn({ method: "POST" })
     if (convErr) throw new Error(convErr.message);
     if (!conv) throw new Error("Not authorized");
 
-    const recipientId =
-      context.userId === conv.owner_admin_id ? conv.user_id : conv.owner_admin_id;
+    const recipientId = context.userId === conv.owner_admin_id ? conv.user_id : conv.owner_admin_id;
 
     const query = supabaseAdmin.from("fcm_tokens").select("token");
     const { data: rows, error } =
@@ -126,4 +125,3 @@ export const notifyAnnouncement = createServerFn({ method: "POST" })
     });
     return { ok: true, ...result };
   });
-

@@ -2,11 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { connectLivekitCall, type CallConn } from "@/lib/livekit-client";
-import {
-  startLivekitCall,
-  acceptLivekitCall,
-  endLivekitCall,
-} from "@/lib/livekit.functions";
+import { startLivekitCall, acceptLivekitCall, endLivekitCall } from "@/lib/livekit.functions";
 
 export type CallStatus = "idle" | "calling" | "ringing" | "connected" | "ended";
 
@@ -38,13 +34,17 @@ export function useVoiceCall(selfId: string | null) {
     if (audioContainerRef.current) audioContainerRef.current.innerHTML = "";
     const rid = roomIdRef.current;
     roomIdRef.current = null;
-    const duration = startedAtRef.current ? Math.round((Date.now() - startedAtRef.current) / 1000) : 0;
+    const duration = startedAtRef.current
+      ? Math.round((Date.now() - startedAtRef.current) / 1000)
+      : 0;
     startedAtRef.current = null;
     setMuted(false);
     setStatus("ended");
     if (rid) {
       try {
-        await endLivekitCall({ data: { room_id: rid, status: finalStatus, duration_seconds: duration } });
+        await endLivekitCall({
+          data: { room_id: rid, status: finalStatus, duration_seconds: duration },
+        });
       } catch {}
     }
     // reset to idle shortly so UI clears
@@ -58,7 +58,12 @@ export function useVoiceCall(selfId: string | null) {
       .channel(`ring-${selfId}`)
       .on(
         "postgres_changes",
-        { event: "INSERT", schema: "public", table: "call_history", filter: `callee_id=eq.${selfId}` },
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "call_history",
+          filter: `callee_id=eq.${selfId}`,
+        },
         async (payload) => {
           const row = payload.new as { id: string; caller_id: string; status: string };
           if (row.status !== "ringing") return;
@@ -73,10 +78,18 @@ export function useVoiceCall(selfId: string | null) {
       )
       .on(
         "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "call_history", filter: `callee_id=eq.${selfId}` },
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "call_history",
+          filter: `callee_id=eq.${selfId}`,
+        },
         (payload) => {
           const row = payload.new as { id: string; status: string };
-          if ((row.status === "ended" || row.status === "declined") && incoming?.room_id === row.id) {
+          if (
+            (row.status === "ended" || row.status === "declined") &&
+            incoming?.room_id === row.id
+          ) {
             setIncoming(null);
           }
         },
@@ -89,29 +102,32 @@ export function useVoiceCall(selfId: string | null) {
   }, [selfId]);
 
   // Caller: also watch our own outgoing row for callee accepting/declining.
-  const watchOutgoing = useCallback((roomId: string) => {
-    const ch = supabase
-      .channel(`outgoing-${roomId}`)
-      .on(
-        "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "call_history", filter: `id=eq.${roomId}` },
-        (payload) => {
-          const row = payload.new as { status: string };
-          if (row.status === "connected") {
-            setStatus("connected");
-            if (!startedAtRef.current) startedAtRef.current = Date.now();
-          }
-          if (row.status === "declined" || row.status === "ended" || row.status === "missed") {
-            void cleanup(row.status === "declined" ? "declined" : "ended");
-            supabase.removeChannel(ch);
-          }
-        },
-      )
-      .subscribe();
-    return () => {
-      supabase.removeChannel(ch);
-    };
-  }, [cleanup]);
+  const watchOutgoing = useCallback(
+    (roomId: string) => {
+      const ch = supabase
+        .channel(`outgoing-${roomId}`)
+        .on(
+          "postgres_changes",
+          { event: "UPDATE", schema: "public", table: "call_history", filter: `id=eq.${roomId}` },
+          (payload) => {
+            const row = payload.new as { status: string };
+            if (row.status === "connected") {
+              setStatus("connected");
+              if (!startedAtRef.current) startedAtRef.current = Date.now();
+            }
+            if (row.status === "declined" || row.status === "ended" || row.status === "missed") {
+              void cleanup(row.status === "declined" ? "declined" : "ended");
+              supabase.removeChannel(ch);
+            }
+          },
+        )
+        .subscribe();
+      return () => {
+        supabase.removeChannel(ch);
+      };
+    },
+    [cleanup],
+  );
 
   const call = useCallback(
     async (peerId: string, conversationId?: string | null) => {

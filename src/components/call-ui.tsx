@@ -26,15 +26,33 @@ export function CallControls({
   if (status === "idle") return null;
   return (
     <div className="flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1.5 text-xs">
-      <span className={status === "connected" ? "h-2 w-2 rounded-full bg-green-500" : "h-2 w-2 animate-pulse rounded-full bg-primary"} />
+      <span
+        className={
+          status === "connected"
+            ? "h-2 w-2 rounded-full bg-green-500"
+            : "h-2 w-2 animate-pulse rounded-full bg-primary"
+        }
+      />
       <span className="font-medium">
         {peerName ? `${peerName} · ` : ""}
         {STATUS_LABEL[status]}
       </span>
-      <Button size="icon" variant="outline" onClick={onToggleMute} className="h-7 w-7" title={muted ? "Unmute" : "Mute"}>
+      <Button
+        size="icon"
+        variant="outline"
+        onClick={onToggleMute}
+        className="h-7 w-7"
+        title={muted ? "Unmute" : "Mute"}
+      >
         {muted ? <MicOff className="h-3.5 w-3.5" /> : <Mic className="h-3.5 w-3.5" />}
       </Button>
-      <Button size="icon" variant="destructive" onClick={onHangup} className="h-7 w-7" title="End call">
+      <Button
+        size="icon"
+        variant="destructive"
+        onClick={onHangup}
+        className="h-7 w-7"
+        title="End call"
+      >
         <PhoneOff className="h-3.5 w-3.5" />
       </Button>
     </div>
