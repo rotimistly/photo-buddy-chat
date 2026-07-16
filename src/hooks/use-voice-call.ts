@@ -155,8 +155,8 @@ export function useVoiceCall(selfId: string | null) {
         });
         connRef.current = conn;
         setStatus((s) => (s === "calling" ? "ringing" : s));
-      } catch (e: any) {
-        toast.error(e?.message ?? "Could not start call");
+      } catch (e: unknown) {
+        toast.error((e instanceof Error ? e.message : null) ?? "Could not start call");
         await cleanup("ended");
       }
     },
@@ -182,8 +182,8 @@ export function useVoiceCall(selfId: string | null) {
         onDisconnected: () => void cleanup("ended"),
       });
       connRef.current = conn;
-    } catch (e: any) {
-      toast.error(e?.message ?? "Could not answer");
+    } catch (e: unknown) {
+      toast.error((e instanceof Error ? e.message : null) ?? "Could not answer");
       await cleanup("ended");
     }
   }, [incoming, cleanup]);
