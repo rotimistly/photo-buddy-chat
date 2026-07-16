@@ -19,12 +19,9 @@ import {
   Megaphone,
   Search,
   Phone,
-  PhoneOff,
   Hourglass,
   UserPlus,
   X,
-  Package,
-  Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
@@ -33,13 +30,8 @@ import { claimUser, releaseUser } from "@/lib/claim.functions";
 import { getSignedMediaUrls } from "@/lib/media.functions";
 import { notifyRecipients, notifyAnnouncement } from "@/lib/fcm.functions";
 import { ensureFcmSubscribed } from "@/lib/fcm-client";
-import { startCall, listenForIncomingCall, type CallSession } from "@/lib/webrtc";
-import {
-  createShipment,
-  updateShipmentStatus,
-  deleteShipment,
-  SHIPMENT_STATUSES,
-} from "@/lib/tracking.functions";
+import { useVoiceCall } from "@/hooks/use-voice-call";
+import { CallControls, IncomingCallDialog } from "@/components/call-ui";
 
 export const Route = createFileRoute("/ops-console-9f2a")({
   head: () => ({
@@ -52,7 +44,6 @@ export const Route = createFileRoute("/ops-console-9f2a")({
 });
 
 type Session = { userId: string; email: string };
-type Profile = { id: string; name: string; is_admin: boolean };
 type WaitingUser = { id: string; name: string; four_digit_id: string | null; created_at: string };
 type OwnedUser = { id: string; name: string; four_digit_id: string | null; created_at: string };
 type Conversation = { id: string; user_id: string; owner_admin_id: string };
@@ -64,6 +55,7 @@ type Message = {
   media_kind: string | null;
   created_at: string;
 };
+type AdminPeer = { id: string; name: string };
 
 function OpsConsole() {
   const [phase, setPhase] = useState<"loading" | "auth" | "denied" | "workspace">("loading");
@@ -236,7 +228,7 @@ function AdminAuthCard({ onSignedIn }: { onSignedIn: () => void }) {
 
 function AdminWorkspace({ session }: { session: Session }) {
   const navigate = useNavigate();
-  type Tab = "chats" | "waiting" | "announcements" | "history" | "shipments";
+  type Tab = "chats" | "waiting" | "announcements" | "history";
   const [tab, setTab] = useState<Tab>("chats");
   const [waiting, setWaiting] = useState<WaitingUser[]>([]);
   const [users, setUsers] = useState<OwnedUser[]>([]);
@@ -244,13 +236,16 @@ function AdminWorkspace({ session }: { session: Session }) {
   const [activeUserId, setActiveUserId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [stats, setStats] = useState({ users: 0, waiting: 0, messages: 0 });
+  const [adminPeers, setAdminPeers] = useState<AdminPeer[]>([]);
+
+  const voice = useVoiceCall(session.userId);
 
   const signOut = async () => {
+    await voice.hangup();
     await supabase.auth.signOut();
     navigate({ to: "/" });
   };
 
-  // Load waiting + owned users + conversations
   const loadUsers = useCallback(async () => {
     const [{ data: w }, { data: mine }, { data: cs }] = await Promise.all([
       supabase.from("profiles").select("id, name, four_digit_id, created_at").is("assigned_admin_id", null).eq("is_admin", false).order("created_at", { ascending: true }),
@@ -266,8 +261,21 @@ function AdminWorkspace({ session }: { session: Session }) {
     setStats({ users: (mine ?? []).length, waiting: (w ?? []).length, messages: msgCount ?? 0 });
   }, [session.userId]);
 
+  // Load other admin peers (for admin↔admin calls).
+  const loadAdminPeers = useCallback(async () => {
+    const { data: roles } = await supabase.from("user_roles").select("user_id").eq("role", "admin");
+    const ids = (roles ?? []).map((r) => r.user_id as string).filter((id) => id !== session.userId);
+    if (ids.length === 0) {
+      setAdminPeers([]);
+      return;
+    }
+    const { data: profs } = await supabase.from("profiles").select("id, name").in("id", ids);
+    setAdminPeers((profs ?? []) as AdminPeer[]);
+  }, [session.userId]);
+
   useEffect(() => {
     loadUsers();
+    loadAdminPeers();
     const chP = supabase
       .channel(`ops-profiles-${session.userId}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, () => loadUsers())
@@ -280,7 +288,7 @@ function AdminWorkspace({ session }: { session: Session }) {
       supabase.removeChannel(chP);
       supabase.removeChannel(chC);
     };
-  }, [session.userId, loadUsers]);
+  }, [session.userId, loadUsers, loadAdminPeers]);
 
   const handleClaim = async (userId: string) => {
     try {
@@ -338,10 +346,34 @@ function AdminWorkspace({ session }: { session: Session }) {
         <nav className="flex flex-col gap-1 p-2">
           <NavItem icon={<MessageSquare className="h-4 w-4" />} label="Chats" count={users.length} active={tab === "chats"} onClick={() => setTab("chats")} />
           <NavItem icon={<Hourglass className="h-4 w-4" />} label="Waiting" count={waiting.length} active={tab === "waiting"} onClick={() => setTab("waiting")} highlight={waiting.length > 0} />
-          <NavItem icon={<Package className="h-4 w-4" />} label="Shipments" active={tab === "shipments"} onClick={() => setTab("shipments")} />
           <NavItem icon={<Megaphone className="h-4 w-4" />} label="Announcements" active={tab === "announcements"} onClick={() => setTab("announcements")} />
           <NavItem icon={<Phone className="h-4 w-4" />} label="Call history" active={tab === "history"} onClick={() => setTab("history")} />
         </nav>
+        {adminPeers.length > 0 && (
+          <div className="border-t border-border p-3">
+            <p className="mb-2 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Admin peers</p>
+            <ul className="space-y-1">
+              {adminPeers.map((p) => (
+                <li key={p.id} className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent/60">
+                  <div className="grid h-6 w-6 place-items-center rounded-full bg-accent text-[10px] font-medium">
+                    {p.name.charAt(0).toUpperCase()}
+                  </div>
+                  <span className="min-w-0 flex-1 truncate">{p.name}</span>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-7 w-7"
+                    onClick={() => voice.call(p.id, null)}
+                    disabled={voice.inCall}
+                    title={`Call ${p.name}`}
+                  >
+                    <Phone className="h-3.5 w-3.5" />
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
         <div className="border-t border-border p-4 text-xs text-muted-foreground">
           <p><Users className="mr-1 inline h-3 w-3" /> {stats.users} users</p>
           <p><MessageSquare className="mr-1 inline h-3 w-3" /> {stats.messages} messages</p>
@@ -349,12 +381,23 @@ function AdminWorkspace({ session }: { session: Session }) {
       </aside>
 
       <main className="flex flex-1 flex-col">
-        {tab === "waiting" && (
-          <WaitingTab waiting={waiting} onClaim={handleClaim} />
+        <div ref={voice.audioContainerRef} className="hidden" aria-hidden />
+        <IncomingCallDialog incoming={voice.incoming} onAccept={voice.accept} onDecline={voice.decline} />
+        {voice.inCall && (
+          <div className="border-b border-border bg-card/60 px-4 py-2">
+            <div className="mx-auto flex max-w-3xl items-center justify-end">
+              <CallControls
+                status={voice.status}
+                muted={voice.muted}
+                onHangup={voice.hangup}
+                onToggleMute={voice.toggleMute}
+              />
+            </div>
+          </div>
         )}
+        {tab === "waiting" && <WaitingTab waiting={waiting} onClaim={handleClaim} />}
         {tab === "announcements" && <AnnouncementsTab session={session} />}
         {tab === "history" && <CallHistoryTab session={session} />}
-        {tab === "shipments" && <ShipmentsTab session={session} users={users} />}
         {tab === "chats" && (
           <div className="flex flex-1">
             <div className="flex w-72 flex-col border-r border-border bg-card">
@@ -393,7 +436,14 @@ function AdminWorkspace({ session }: { session: Session }) {
                   Select a user to open the chat.
                 </div>
               ) : (
-                <AdminChat session={session} conv={activeConv} user={activeUser} onRelease={() => handleRelease(activeUser.id)} />
+                <AdminChat
+                  session={session}
+                  conv={activeConv}
+                  user={activeUser}
+                  onRelease={() => handleRelease(activeUser.id)}
+                  onCall={() => voice.call(activeUser.id, activeConv.id)}
+                  canCall={!voice.inCall}
+                />
               )}
             </div>
           </div>
@@ -553,16 +603,26 @@ function AnnouncementsTab({ session }: { session: Session }) {
   );
 }
 
+type CallRow = {
+  id: string;
+  caller_id: string;
+  callee_id: string;
+  status: string;
+  duration_seconds: number | null;
+  started_at: string;
+  ended_at: string | null;
+};
+
 function CallHistoryTab({ session }: { session: Session }) {
-  const [items, setItems] = useState<any[]>([]);
+  const [items, setItems] = useState<CallRow[]>([]);
   useEffect(() => {
     supabase
       .from("call_history")
       .select("id, caller_id, callee_id, status, duration_seconds, started_at, ended_at")
-      .eq("owner_admin_id", session.userId)
+      .or(`caller_id.eq.${session.userId},callee_id.eq.${session.userId}`)
       .order("started_at", { ascending: false })
       .limit(200)
-      .then(({ data }) => setItems(data ?? []));
+      .then(({ data }) => setItems((data ?? []) as CallRow[]));
   }, [session.userId]);
   return (
     <div className="flex-1 overflow-y-auto p-6">
@@ -576,7 +636,7 @@ function CallHistoryTab({ session }: { session: Session }) {
             <div key={c.id} className="flex items-center gap-3 p-4 text-sm">
               <Phone className="h-4 w-4 text-muted-foreground" />
               <span className="flex-1 capitalize">{c.status}</span>
-              <span className="text-muted-foreground">{c.duration_seconds}s</span>
+              <span className="text-muted-foreground">{c.duration_seconds ?? 0}s</span>
               <span className="text-xs text-muted-foreground">
                 {formatDistanceToNow(new Date(c.started_at), { addSuffix: true })}
               </span>
@@ -593,24 +653,24 @@ function AdminChat({
   conv,
   user,
   onRelease,
+  onCall,
+  canCall,
 }: {
   session: Session;
   conv: Conversation;
   user: OwnedUser;
   onRelease: () => void;
+  onCall: () => void;
+  canCall: boolean;
 }) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [signed, setSigned] = useState<Record<string, string>>({});
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
   const [recording, setRecording] = useState(false);
-  const [call, setCall] = useState<CallSession | null>(null);
-  const [callStatus, setCallStatus] = useState("idle");
-  const [incoming, setIncoming] = useState<{ fromId: string } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const recRef = useRef<MediaRecorder | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const audioRef = useRef<HTMLAudioElement>(null);
 
   const loadMessages = useCallback(async () => {
     const { data } = await supabase
@@ -642,16 +702,6 @@ function AdminChat({
       supabase.removeChannel(ch);
     };
   }, [conv.id, loadMessages]);
-
-  useEffect(() => {
-    let cancel: (() => void) | null = null;
-    listenForIncomingCall({
-      conversationId: conv.id,
-      selfId: session.userId,
-      onRing: (fromId) => setIncoming({ fromId }),
-    }).then((c) => (cancel = c));
-    return () => cancel?.();
-  }, [conv.id, session.userId]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
@@ -735,60 +785,6 @@ function AdminChat({
     setRecording(false);
   };
 
-  const beginCall = async () => {
-    try {
-      const s = await startCall({
-        conversationId: conv.id,
-        selfId: session.userId,
-        peerId: conv.user_id,
-        role: "caller",
-        onRemote: (stream) => {
-          if (audioRef.current) audioRef.current.srcObject = stream;
-        },
-        onStatus: (st) => {
-          setCallStatus(st);
-          if (st === "ended") setCall(null);
-        },
-      });
-      setCall(s);
-      supabase.from("call_history").insert({
-        conversation_id: conv.id,
-        owner_admin_id: session.userId,
-        caller_id: session.userId,
-        callee_id: conv.user_id,
-        status: "ringing",
-      });
-      notifyRecipients({ data: { conversationId: conv.id, kind: "ring", preview: "Incoming voice call" } }).catch(() => {});
-    } catch {
-      toast.error("Couldn't start call");
-    }
-  };
-  const acceptIncoming = async () => {
-    if (!incoming) return;
-    const s = await startCall({
-      conversationId: conv.id,
-      selfId: session.userId,
-      peerId: incoming.fromId,
-      role: "callee",
-      onRemote: (stream) => {
-        if (audioRef.current) audioRef.current.srcObject = stream;
-      },
-      onStatus: (st) => {
-        setCallStatus(st);
-        if (st === "ended") {
-          setCall(null);
-          setIncoming(null);
-        }
-      },
-    });
-    setCall(s);
-    setIncoming(null);
-  };
-  const endCall = async () => {
-    if (call) await call.end();
-    setCall(null);
-  };
-
   return (
     <>
       <header className="flex items-center gap-3 border-b border-border bg-card px-4 py-3">
@@ -799,51 +795,13 @@ function AdminChat({
           <p className="truncate font-medium">{user.name}</p>
           <p className="truncate text-xs text-muted-foreground">#{user.four_digit_id}</p>
         </div>
-        {!call ? (
-          <Button size="sm" variant="outline" onClick={beginCall}>
-            <Phone className="mr-1.5 h-4 w-4" /> Call
-          </Button>
-        ) : (
-          <Button size="sm" variant="destructive" onClick={endCall}>
-            <PhoneOff className="mr-1.5 h-4 w-4" /> {callStatus === "connected" ? "End" : "Cancel"}
-          </Button>
-        )}
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={async () => {
-            const description = window.prompt("Package description (optional)?") ?? undefined;
-            try {
-              const r = await createShipment({
-                data: { customer_id: user.id, conversation_id: conv.id, description: description || undefined },
-              });
-              toast.success(`Tracking created: ${r.tracking_number}`);
-            } catch (e: any) {
-              toast.error(e?.message ?? "Failed to create tracking");
-            }
-          }}
-        >
-          <Package className="mr-1.5 h-4 w-4" /> Tracking
+        <Button size="sm" variant="outline" onClick={onCall} disabled={!canCall}>
+          <Phone className="mr-1.5 h-4 w-4" /> Call
         </Button>
         <Button size="sm" variant="ghost" onClick={onRelease}>
           Release
         </Button>
       </header>
-      <audio ref={audioRef} autoPlay className="hidden" />
-      {incoming && (
-        <div className="border-b border-border bg-primary/10 px-4 py-3">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <Phone className="h-4 w-4 animate-pulse text-primary" />
-              <span className="font-medium">Incoming call…</span>
-            </div>
-            <div className="flex gap-2">
-              <Button size="sm" onClick={acceptIncoming}>Answer</Button>
-              <Button size="sm" variant="outline" onClick={() => setIncoming(null)}>Dismiss</Button>
-            </div>
-          </div>
-        </div>
-      )}
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-6">
         <div className="mx-auto max-w-2xl space-y-3">
           {messages.map((m) => (
@@ -914,103 +872,6 @@ function MsgBubble({ m, mine, signed }: { m: Message; mine: boolean; signed: Rec
         <p className={cn("mt-1 text-[10px]", mine ? "text-primary-foreground/70" : "text-muted-foreground")}>
           {formatDistanceToNow(new Date(m.created_at), { addSuffix: true })}
         </p>
-      </div>
-    </div>
-  );
-}
-
-function ShipmentsTab({ session, users }: { session: Session; users: OwnedUser[] }) {
-  const [items, setItems] = useState<any[]>([]);
-  const [busy, setBusy] = useState<string | null>(null);
-
-  const load = useCallback(async () => {
-    const { data } = await supabase
-      .from("shipments")
-      .select("id, tracking_number, customer_id, description, status, created_at, updated_at")
-      .eq("owner_admin_id", session.userId)
-      .order("created_at", { ascending: false });
-    setItems(data ?? []);
-  }, [session.userId]);
-
-  useEffect(() => {
-    load();
-    const ch = supabase
-      .channel(`ops-ships-${session.userId}`)
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "shipments", filter: `owner_admin_id=eq.${session.userId}` },
-        () => load(),
-      )
-      .subscribe();
-    return () => {
-      supabase.removeChannel(ch);
-    };
-  }, [session.userId, load]);
-
-  const userName = (id: string) => users.find((u) => u.id === id)?.name ?? id.slice(0, 8);
-
-  const setStatus = async (id: string, status: string) => {
-    setBusy(id);
-    try {
-      await updateShipmentStatus({ data: { shipment_id: id, status: status as any } });
-      toast.success("Status updated");
-    } catch (e: any) {
-      toast.error(e?.message ?? "Update failed");
-    } finally {
-      setBusy(null);
-    }
-  };
-
-  const remove = async (id: string) => {
-    if (!confirm("Delete this shipment permanently?")) return;
-    try {
-      await deleteShipment({ data: { shipment_id: id } });
-      toast.success("Shipment deleted");
-    } catch (e: any) {
-      toast.error(e?.message ?? "Delete failed");
-    }
-  };
-
-  return (
-    <div className="flex-1 overflow-y-auto p-6">
-      <div className="mx-auto max-w-4xl">
-        <h1 className="font-display text-2xl">Shipments</h1>
-        <p className="text-sm text-muted-foreground">
-          Update tracking status — customers see changes instantly and receive a push notification.
-        </p>
-        <div className="mt-6 divide-y divide-border rounded-2xl border border-border bg-card">
-          {items.length === 0 && (
-            <p className="p-8 text-center text-sm text-muted-foreground">
-              No shipments yet. Open a chat and click "Tracking" to create one.
-            </p>
-          )}
-          {items.map((s) => (
-            <div key={s.id} className="flex flex-wrap items-center gap-3 p-4">
-              <div className="min-w-0 flex-1">
-                <p className="font-mono text-sm">{s.tracking_number}</p>
-                <p className="truncate text-xs text-muted-foreground">
-                  {userName(s.customer_id)}
-                  {s.description ? ` · ${s.description}` : ""}
-                </p>
-              </div>
-              <select
-                value={s.status}
-                disabled={busy === s.id}
-                onChange={(e) => setStatus(s.id, e.target.value)}
-                className="rounded-md border border-input bg-background px-2 py-1.5 text-sm"
-              >
-                {SHIPMENT_STATUSES.map((st) => (
-                  <option key={st} value={st}>
-                    {st.replace(/_/g, " ")}
-                  </option>
-                ))}
-              </select>
-              <Button size="icon" variant="ghost" onClick={() => remove(s.id)} title="Delete">
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </div>
-          ))}
-        </div>
       </div>
     </div>
   );
