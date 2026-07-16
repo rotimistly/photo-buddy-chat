@@ -12,9 +12,15 @@ export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "Support — sign in with your name and code" },
-      { name: "description", content: "Sign in with your name and 4-digit code to chat with our support team." },
+      {
+        name: "description",
+        content: "Sign in with your name and 4-digit code to chat with our support team.",
+      },
       { property: "og:title", content: "Support — sign in with your name and code" },
-      { property: "og:description", content: "Sign in with your name and 4-digit code to chat with our support team." },
+      {
+        property: "og:description",
+        content: "Sign in with your name and 4-digit code to chat with our support team.",
+      },
     ],
   }),
   component: Landing,
@@ -61,16 +67,21 @@ function Landing() {
 
       <section className="mx-auto grid max-w-5xl gap-10 px-6 pb-24 pt-8 md:grid-cols-2 md:items-center">
         <div>
-          <p className="text-sm uppercase tracking-widest text-muted-foreground">Support platform</p>
+          <p className="text-sm uppercase tracking-widest text-muted-foreground">
+            Support platform
+          </p>
           <h1 className="mt-3 font-display text-5xl leading-tight sm:text-6xl">
-            Talk to a real person.<br />
+            Talk to a real person.
+            <br />
             <span className="italic text-primary">Just a name and a code.</span>
           </h1>
           <p className="mt-6 max-w-md text-muted-foreground">
-            Enter your name and a 4-digit code. We'll create your account instantly and connect you to a support administrator.
+            Enter your name and a 4-digit code. We'll create your account instantly and connect you
+            to a support administrator.
           </p>
           <div className="mt-8 flex items-center gap-2 text-xs text-muted-foreground">
-            <ShieldCheck className="h-4 w-4" /> Private conversation with your assigned administrator only.
+            <ShieldCheck className="h-4 w-4" /> Private conversation with your assigned
+            administrator only.
           </div>
         </div>
         <AuthCard />
@@ -115,8 +126,8 @@ function AuthCard() {
         throw error;
       }
       navigate({ to: "/chat" });
-    } catch (err: any) {
-      toast.error(err?.message ?? "Something went wrong");
+    } catch (err: unknown) {
+      toast.error((err instanceof Error ? err.message : null) ?? "Something went wrong");
     } finally {
       setBusy(false);
     }
@@ -143,7 +154,15 @@ function AuthCard() {
       <form onSubmit={submit} className="mt-5 space-y-4">
         <div className="space-y-1.5">
           <Label htmlFor="name">Name</Label>
-          <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Alex" autoComplete="off" maxLength={40} required />
+          <Input
+            id="name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="e.g. Alex"
+            autoComplete="off"
+            maxLength={40}
+            required
+          />
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="code">4-digit code</Label>
@@ -158,7 +177,9 @@ function AuthCard() {
             required
           />
           {mode === "register" && (
-            <p className="text-xs text-muted-foreground">Pick any 4 digits — you'll use them to sign back in.</p>
+            <p className="text-xs text-muted-foreground">
+              Pick any 4 digits — you'll use them to sign back in.
+            </p>
           )}
         </div>
         <Button type="submit" className="w-full" disabled={busy}>

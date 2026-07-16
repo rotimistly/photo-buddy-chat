@@ -25,7 +25,8 @@ export const registerUser = createServerFn({ method: "POST" })
       .eq("name_lower" as never, data.name.toLowerCase())
       .eq("four_digit_id", data.code)
       .maybeSingle();
-    if (existing) throw new Error("This name and code are already taken. Try another 4-digit code.");
+    if (existing)
+      throw new Error("This name and code are already taken. Try another 4-digit code.");
 
     const { data: created, error: createErr } = await supabaseAdmin.auth.admin.createUser({
       email,
@@ -101,7 +102,8 @@ export const registerAdmin = createServerFn({ method: "POST" })
       .from("user_roles")
       .select("*", { head: true, count: "exact" })
       .eq("role", "admin");
-    if ((count ?? 0) >= 2) throw new Error("Admin registration is closed. Two administrators already exist.");
+    if ((count ?? 0) >= 2)
+      throw new Error("Admin registration is closed. Two administrators already exist.");
 
     const { data: created, error: createErr } = await supabaseAdmin.auth.admin.createUser({
       email: data.email.trim().toLowerCase(),

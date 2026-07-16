@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -13,23 +13,19 @@ import {
   Loader2,
   Hourglass,
   Phone,
-  PhoneOff,
   Megaphone,
-  Package,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
 import { getSignedMediaUrls } from "@/lib/media.functions";
 import { notifyRecipients } from "@/lib/fcm.functions";
 import { ensureFcmSubscribed } from "@/lib/fcm-client";
-import { startCall, listenForIncomingCall, type CallSession } from "@/lib/webrtc";
+import { useVoiceCall } from "@/hooks/use-voice-call";
+import { CallControls, IncomingCallDialog } from "@/components/call-ui";
 
 export const Route = createFileRoute("/chat")({
   head: () => ({
-    meta: [
-      { title: "Your support chat" },
-      { name: "robots", content: "noindex" },
-    ],
+    meta: [{ title: "Your support chat" }, { name: "robots", content: "noindex" }],
   }),
   component: ChatPage,
 });
@@ -68,12 +64,9 @@ function ChatPage() {
   const fileRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const recRef = useRef<MediaRecorder | null>(null);
-  const [call, setCall] = useState<CallSession | null>(null);
-  const [callStatus, setCallStatus] = useState<string>("idle");
-  const audioRef = useRef<HTMLAudioElement>(null);
-  const [incoming, setIncoming] = useState<{ fromId: string } | null>(null);
 
-  // 1. Load session, profile, conversation
+  const voice = useVoiceCall(userId);
+
   useEffect(() => {
     (async () => {
       const { data: s } = await supabase.auth.getSession();
@@ -118,7 +111,6 @@ function ChatPage() {
     })();
   }, [navigate]);
 
-  // 2. Watch profile for assignment
   useEffect(() => {
     if (!userId) return;
     const ch = supabase
@@ -151,11 +143,12 @@ function ChatPage() {
       try {
         const { urls } = await getSignedMediaUrls({ data: { paths } });
         setSigned(urls);
-      } catch {}
+      } catch {
+        void 0;
+      }
     }
   }, [conv]);
 
-  // 3. Messages realtime
   useEffect(() => {
     if (!conv) return;
     loadMessages();
@@ -163,7 +156,12 @@ function ChatPage() {
       .channel(`msg-${conv.id}`)
       .on(
         "postgres_changes",
-        { event: "INSERT", schema: "public", table: "messages", filter: `conversation_id=eq.${conv.id}` },
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "messages",
+          filter: `conversation_id=eq.${conv.id}`,
+        },
         () => loadMessages(),
       )
       .subscribe();
@@ -172,7 +170,6 @@ function ChatPage() {
     };
   }, [conv, loadMessages]);
 
-  // 4. Announcements realtime
   useEffect(() => {
     if (!profile?.assigned_admin_id) return;
     const ownerId = profile.assigned_admin_id;
@@ -190,7 +187,12 @@ function ChatPage() {
       .channel(`ann-${ownerId}`)
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "announcements", filter: `owner_admin_id=eq.${ownerId}` },
+        {
+          event: "*",
+          schema: "public",
+          table: "announcements",
+          filter: `owner_admin_id=eq.${ownerId}`,
+        },
         () => load(),
       )
       .subscribe();
@@ -199,24 +201,12 @@ function ChatPage() {
     };
   }, [profile?.assigned_admin_id]);
 
-  // 5. Listen for incoming voice calls
-  useEffect(() => {
-    if (!conv || !userId || !profile?.assigned_admin_id) return;
-    let cancel: (() => void) | null = null;
-    listenForIncomingCall({
-      conversationId: conv.id,
-      selfId: userId,
-      onRing: (fromId) => setIncoming({ fromId }),
-    }).then((c) => (cancel = c));
-    return () => cancel?.();
-  }, [conv, userId, profile?.assigned_admin_id]);
-
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages.length]);
 
   const signOut = async () => {
-    if (call) await call.end();
+    await voice.hangup();
     await supabase.auth.signOut();
     navigate({ to: "/" });
   };
@@ -307,51 +297,7 @@ function ChatPage() {
 
   const beginCall = async () => {
     if (!conv || !userId) return;
-    try {
-      const s = await startCall({
-        conversationId: conv.id,
-        selfId: userId,
-        peerId: conv.owner_admin_id,
-        role: "caller",
-        onRemote: (stream) => {
-          if (audioRef.current) audioRef.current.srcObject = stream;
-        },
-        onStatus: (st) => {
-          setCallStatus(st);
-          if (st === "ended") setCall(null);
-        },
-      });
-      setCall(s);
-    } catch {
-      toast.error("Couldn't start call");
-    }
-  };
-
-  const acceptIncoming = async () => {
-    if (!conv || !userId || !incoming) return;
-    const s = await startCall({
-      conversationId: conv.id,
-      selfId: userId,
-      peerId: incoming.fromId,
-      role: "callee",
-      onRemote: (stream) => {
-        if (audioRef.current) audioRef.current.srcObject = stream;
-      },
-      onStatus: (st) => {
-        setCallStatus(st);
-        if (st === "ended") {
-          setCall(null);
-          setIncoming(null);
-        }
-      },
-    });
-    setCall(s);
-    setIncoming(null);
-  };
-  const declineIncoming = () => setIncoming(null);
-  const endCall = async () => {
-    if (call) await call.end();
-    setCall(null);
+    await voice.call(conv.owner_admin_id, conv.id);
   };
 
   if (loading) {
@@ -362,7 +308,6 @@ function ChatPage() {
     );
   }
 
-  // Waiting screen
   if (!profile?.assigned_admin_id) {
     return (
       <div className="min-h-screen bg-background">
@@ -373,7 +318,8 @@ function ChatPage() {
           </div>
           <h1 className="mt-6 font-display text-3xl">You're in the queue</h1>
           <p className="mt-3 text-muted-foreground">
-            Your account has been created successfully. Waiting to be assigned to a support administrator. You'll be connected shortly.
+            Your account has been created successfully. Waiting to be assigned to a support
+            administrator. You'll be connected shortly.
           </p>
           <span className="mt-6 inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
             <span className="h-2 w-2 animate-pulse rounded-full bg-primary" /> Waiting
@@ -390,26 +336,27 @@ function ChatPage() {
         subtitle={adminName ? `Chatting with ${adminName}` : "Assigned"}
         onSignOut={signOut}
         right={
-          <>
-            <Link to="/tracking" title="Package tracking">
-              <Button variant="outline" size="sm" type="button">
-                <Package className="mr-1.5 h-4 w-4" /> Tracking
-              </Button>
-            </Link>
-            {!call && (
-              <Button variant="outline" size="sm" onClick={beginCall}>
-                <Phone className="mr-1.5 h-4 w-4" /> Call
-              </Button>
-            )}
-            {call && (
-              <Button variant="destructive" size="sm" onClick={endCall}>
-                <PhoneOff className="mr-1.5 h-4 w-4" /> {callStatus === "connected" ? "End" : "Cancel"}
-              </Button>
-            )}
-          </>
+          voice.inCall ? (
+            <CallControls
+              status={voice.status}
+              muted={voice.muted}
+              onHangup={voice.hangup}
+              onToggleMute={voice.toggleMute}
+              peerName={adminName}
+            />
+          ) : (
+            <Button variant="outline" size="sm" onClick={beginCall}>
+              <Phone className="mr-1.5 h-4 w-4" /> Call
+            </Button>
+          )
         }
       />
-      <audio ref={audioRef} autoPlay className="hidden" />
+      <div ref={voice.audioContainerRef} className="hidden" aria-hidden />
+      <IncomingCallDialog
+        incoming={voice.incoming}
+        onAccept={voice.accept}
+        onDecline={voice.decline}
+      />
 
       {announcements[0] && (
         <div className="border-b border-border bg-accent/40 px-4 py-2 text-sm">
@@ -425,25 +372,12 @@ function ChatPage() {
         </div>
       )}
 
-      {incoming && (
-        <div className="border-b border-border bg-primary/10 px-4 py-3">
-          <div className="mx-auto flex max-w-2xl items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <Phone className="h-4 w-4 animate-pulse text-primary" />
-              <span className="font-medium">Incoming voice call…</span>
-            </div>
-            <div className="flex gap-2">
-              <Button size="sm" onClick={acceptIncoming}>Answer</Button>
-              <Button size="sm" variant="outline" onClick={declineIncoming}>Decline</Button>
-            </div>
-          </div>
-        </div>
-      )}
-
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-6">
         <div className="mx-auto max-w-2xl space-y-3">
           {messages.length === 0 && (
-            <p className="py-16 text-center text-sm text-muted-foreground">Say hello — your administrator will reply here.</p>
+            <p className="py-16 text-center text-sm text-muted-foreground">
+              Say hello — your administrator will reply here.
+            </p>
           )}
           {messages.map((m) => (
             <MessageBubble key={m.id} m={m} mine={m.sender_id === userId} signed={signed} />
@@ -464,15 +398,34 @@ function ChatPage() {
               e.target.value = "";
             }}
           />
-          <Button type="button" variant="outline" size="icon" onClick={() => fileRef.current?.click()} disabled={sending}>
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            onClick={() => fileRef.current?.click()}
+            disabled={sending}
+          >
             <ImageIcon className="h-4 w-4" />
           </Button>
           {!recording ? (
-            <Button type="button" variant="outline" size="icon" onClick={startRec} disabled={sending} title="Record voice">
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              onClick={startRec}
+              disabled={sending}
+              title="Record voice"
+            >
               <Mic className="h-4 w-4" />
             </Button>
           ) : (
-            <Button type="button" variant="destructive" size="icon" onClick={stopRec} title="Stop recording">
+            <Button
+              type="button"
+              variant="destructive"
+              size="icon"
+              onClick={stopRec}
+              title="Stop recording"
+            >
               <Square className="h-4 w-4" />
             </Button>
           )}
@@ -531,13 +484,19 @@ function MessageBubble({
       <div
         className={cn(
           "max-w-[80%] rounded-2xl px-4 py-2.5 text-sm",
-          mine ? "bg-primary text-primary-foreground rounded-br-sm" : "bg-muted text-foreground rounded-bl-sm",
+          mine
+            ? "bg-primary text-primary-foreground rounded-br-sm"
+            : "bg-muted text-foreground rounded-bl-sm",
         )}
       >
         {m.content && <p className="whitespace-pre-wrap break-words">{m.content}</p>}
         {m.media_kind === "image" && url && (
           <a href={url} target="_blank" rel="noreferrer">
-            <img src={url} alt="attachment" className={cn("max-h-80 rounded-lg", m.content && "mt-2")} />
+            <img
+              src={url}
+              alt="attachment"
+              className={cn("max-h-80 rounded-lg", m.content && "mt-2")}
+            />
           </a>
         )}
         {m.media_kind === "voice" && url && <audio src={url} controls className="mt-1 w-56" />}
@@ -546,7 +505,12 @@ function MessageBubble({
             Download file
           </a>
         )}
-        <p className={cn("mt-1 text-[10px]", mine ? "text-primary-foreground/70" : "text-muted-foreground")}>
+        <p
+          className={cn(
+            "mt-1 text-[10px]",
+            mine ? "text-primary-foreground/70" : "text-muted-foreground",
+          )}
+        >
           {formatDistanceToNow(new Date(m.created_at), { addSuffix: true })}
         </p>
       </div>

@@ -46,7 +46,9 @@ export async function ensureFcmSubscribed(kind: "user" | "admin"): Promise<boole
   }
   try {
     localStorage.setItem("fcm_token", token);
-  } catch {}
+  } catch {
+    void 0;
+  }
   return true;
 }
 
@@ -55,5 +57,7 @@ export async function unregisterFcm() {
     const t = localStorage.getItem("fcm_token");
     if (t) await removeFcmToken({ data: { token: t } });
     localStorage.removeItem("fcm_token");
-  } catch {}
+  } catch {
+    void 0;
+  }
 }

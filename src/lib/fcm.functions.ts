@@ -62,8 +62,7 @@ export const notifyRecipients = createServerFn({ method: "POST" })
     if (convErr) throw new Error(convErr.message);
     if (!conv) throw new Error("Not authorized");
 
-    const recipientId =
-      context.userId === conv.owner_admin_id ? conv.user_id : conv.owner_admin_id;
+    const recipientId = context.userId === conv.owner_admin_id ? conv.user_id : conv.owner_admin_id;
 
     const query = supabaseAdmin.from("fcm_tokens").select("token");
     const { data: rows, error } =
@@ -123,38 +122,6 @@ export const notifyAnnouncement = createServerFn({ method: "POST" })
       body: data.preview,
       url: "/chat",
       tag: `ann-${context.userId}`,
-    });
-    return { ok: true, ...result };
-  });
-
-export const notifyShipmentUpdate = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((input) =>
-    z.object({ shipmentId: z.string().uuid(), status: z.string() }).parse(input),
-  )
-  .handler(async ({ data, context }) => {
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { sendFcmToTokens } = await import("./fcm.server");
-
-    const { data: ship } = await supabaseAdmin
-      .from("shipments")
-      .select("id, customer_id, owner_admin_id, tracking_number")
-      .eq("id", data.shipmentId)
-      .maybeSingle();
-    if (!ship || ship.owner_admin_id !== context.userId) {
-      throw new Error("Not authorized");
-    }
-    const { data: rows } = await supabaseAdmin
-      .from("fcm_tokens")
-      .select("token")
-      .eq("user_id", ship.customer_id);
-    const tokens = (rows ?? []).map((r) => r.token as string);
-
-    const result = await sendFcmToTokens(tokens, {
-      title: `Shipment ${ship.tracking_number}`,
-      body: `Status: ${data.status.replace(/_/g, " ")}`,
-      url: "/tracking",
-      tag: `ship-${ship.id}`,
     });
     return { ok: true, ...result };
   });

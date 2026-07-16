@@ -9,16 +9,10 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as TrackingRouteImport } from './routes/tracking'
 import { Route as OpsConsole9f2aRouteImport } from './routes/ops-console-9f2a'
 import { Route as ChatRouteImport } from './routes/chat'
 import { Route as IndexRouteImport } from './routes/index'
 
-const TrackingRoute = TrackingRouteImport.update({
-  id: '/tracking',
-  path: '/tracking',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const OpsConsole9f2aRoute = OpsConsole9f2aRouteImport.update({
   id: '/ops-console-9f2a',
   path: '/ops-console-9f2a',
@@ -39,45 +33,34 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/chat': typeof ChatRoute
   '/ops-console-9f2a': typeof OpsConsole9f2aRoute
-  '/tracking': typeof TrackingRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/chat': typeof ChatRoute
   '/ops-console-9f2a': typeof OpsConsole9f2aRoute
-  '/tracking': typeof TrackingRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/chat': typeof ChatRoute
   '/ops-console-9f2a': typeof OpsConsole9f2aRoute
-  '/tracking': typeof TrackingRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/chat' | '/ops-console-9f2a' | '/tracking'
+  fullPaths: '/' | '/chat' | '/ops-console-9f2a'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/chat' | '/ops-console-9f2a' | '/tracking'
-  id: '__root__' | '/' | '/chat' | '/ops-console-9f2a' | '/tracking'
+  to: '/' | '/chat' | '/ops-console-9f2a'
+  id: '__root__' | '/' | '/chat' | '/ops-console-9f2a'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ChatRoute: typeof ChatRoute
   OpsConsole9f2aRoute: typeof OpsConsole9f2aRoute
-  TrackingRoute: typeof TrackingRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/tracking': {
-      id: '/tracking'
-      path: '/tracking'
-      fullPath: '/tracking'
-      preLoaderRoute: typeof TrackingRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/ops-console-9f2a': {
       id: '/ops-console-9f2a'
       path: '/ops-console-9f2a'
@@ -106,18 +89,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ChatRoute: ChatRoute,
   OpsConsole9f2aRoute: OpsConsole9f2aRoute,
-  TrackingRoute: TrackingRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

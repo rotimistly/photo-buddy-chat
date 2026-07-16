@@ -1,402 +1,296 @@
-export type Json =
-  | string
-  | number
-  | boolean
-  | null
-  | { [key: string]: Json | undefined }
-  | Json[]
+export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
 export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5"
-  }
+    PostgrestVersion: "14.5";
+  };
   public: {
     Tables: {
       announcements: {
         Row: {
-          body: string
-          created_at: string
-          id: string
-          owner_admin_id: string
-        }
+          body: string;
+          created_at: string;
+          id: string;
+          owner_admin_id: string;
+        };
         Insert: {
-          body: string
-          created_at?: string
-          id?: string
-          owner_admin_id: string
-        }
+          body: string;
+          created_at?: string;
+          id?: string;
+          owner_admin_id: string;
+        };
         Update: {
-          body?: string
-          created_at?: string
-          id?: string
-          owner_admin_id?: string
-        }
-        Relationships: []
-      }
+          body?: string;
+          created_at?: string;
+          id?: string;
+          owner_admin_id?: string;
+        };
+        Relationships: [];
+      };
       audit_logs: {
         Row: {
-          action: string
-          actor_admin_id: string
-          created_at: string
-          id: string
-          ip: string | null
-          metadata: Json
-          target_id: string | null
-          target_owner_admin_id: string | null
-          target_type: string
-          user_agent: string | null
-        }
+          action: string;
+          actor_admin_id: string;
+          created_at: string;
+          id: string;
+          ip: string | null;
+          metadata: Json;
+          target_id: string | null;
+          target_owner_admin_id: string | null;
+          target_type: string;
+          user_agent: string | null;
+        };
         Insert: {
-          action: string
-          actor_admin_id: string
-          created_at?: string
-          id?: string
-          ip?: string | null
-          metadata?: Json
-          target_id?: string | null
-          target_owner_admin_id?: string | null
-          target_type: string
-          user_agent?: string | null
-        }
+          action: string;
+          actor_admin_id: string;
+          created_at?: string;
+          id?: string;
+          ip?: string | null;
+          metadata?: Json;
+          target_id?: string | null;
+          target_owner_admin_id?: string | null;
+          target_type: string;
+          user_agent?: string | null;
+        };
         Update: {
-          action?: string
-          actor_admin_id?: string
-          created_at?: string
-          id?: string
-          ip?: string | null
-          metadata?: Json
-          target_id?: string | null
-          target_owner_admin_id?: string | null
-          target_type?: string
-          user_agent?: string | null
-        }
-        Relationships: []
-      }
+          action?: string;
+          actor_admin_id?: string;
+          created_at?: string;
+          id?: string;
+          ip?: string | null;
+          metadata?: Json;
+          target_id?: string | null;
+          target_owner_admin_id?: string | null;
+          target_type?: string;
+          user_agent?: string | null;
+        };
+        Relationships: [];
+      };
       call_history: {
         Row: {
-          callee_id: string
-          caller_id: string
-          conversation_id: string
-          duration_seconds: number
-          ended_at: string | null
-          id: string
-          owner_admin_id: string
-          started_at: string
-          status: string
-        }
+          callee_id: string;
+          caller_id: string;
+          conversation_id: string | null;
+          duration_seconds: number | null;
+          ended_at: string | null;
+          id: string;
+          owner_admin_id: string;
+          room_name: string | null;
+          started_at: string;
+          status: string;
+        };
         Insert: {
-          callee_id: string
-          caller_id: string
-          conversation_id: string
-          duration_seconds?: number
-          ended_at?: string | null
-          id?: string
-          owner_admin_id: string
-          started_at?: string
-          status: string
-        }
+          callee_id: string;
+          caller_id: string;
+          conversation_id?: string | null;
+          duration_seconds?: number | null;
+          ended_at?: string | null;
+          id?: string;
+          owner_admin_id: string;
+          room_name?: string | null;
+          started_at?: string;
+          status: string;
+        };
         Update: {
-          callee_id?: string
-          caller_id?: string
-          conversation_id?: string
-          duration_seconds?: number
-          ended_at?: string | null
-          id?: string
-          owner_admin_id?: string
-          started_at?: string
-          status?: string
-        }
+          callee_id?: string;
+          caller_id?: string;
+          conversation_id?: string | null;
+          duration_seconds?: number | null;
+          ended_at?: string | null;
+          id?: string;
+          owner_admin_id?: string;
+          room_name?: string | null;
+          started_at?: string;
+          status?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "call_history_conversation_id_fkey"
-            columns: ["conversation_id"]
-            isOneToOne: false
-            referencedRelation: "conversations"
-            referencedColumns: ["id"]
+            foreignKeyName: "call_history_conversation_id_fkey";
+            columns: ["conversation_id"];
+            isOneToOne: false;
+            referencedRelation: "conversations";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       conversations: {
         Row: {
-          created_at: string
-          id: string
-          last_admin_read_at: string | null
-          last_user_read_at: string | null
-          owner_admin_id: string
-          updated_at: string
-          user_id: string
-        }
+          created_at: string;
+          id: string;
+          last_admin_read_at: string | null;
+          last_user_read_at: string | null;
+          owner_admin_id: string;
+          updated_at: string;
+          user_id: string;
+        };
         Insert: {
-          created_at?: string
-          id?: string
-          last_admin_read_at?: string | null
-          last_user_read_at?: string | null
-          owner_admin_id: string
-          updated_at?: string
-          user_id: string
-        }
+          created_at?: string;
+          id?: string;
+          last_admin_read_at?: string | null;
+          last_user_read_at?: string | null;
+          owner_admin_id: string;
+          updated_at?: string;
+          user_id: string;
+        };
         Update: {
-          created_at?: string
-          id?: string
-          last_admin_read_at?: string | null
-          last_user_read_at?: string | null
-          owner_admin_id?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
+          created_at?: string;
+          id?: string;
+          last_admin_read_at?: string | null;
+          last_user_read_at?: string | null;
+          owner_admin_id?: string;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
       fcm_tokens: {
         Row: {
-          created_at: string
-          device_info: Json | null
-          id: string
-          last_seen_at: string
-          owner_admin_id: string | null
-          role: string
-          token: string
-          user_id: string | null
-        }
+          created_at: string;
+          device_info: Json | null;
+          id: string;
+          last_seen_at: string;
+          owner_admin_id: string | null;
+          role: string;
+          token: string;
+          user_id: string | null;
+        };
         Insert: {
-          created_at?: string
-          device_info?: Json | null
-          id?: string
-          last_seen_at?: string
-          owner_admin_id?: string | null
-          role: string
-          token: string
-          user_id?: string | null
-        }
+          created_at?: string;
+          device_info?: Json | null;
+          id?: string;
+          last_seen_at?: string;
+          owner_admin_id?: string | null;
+          role: string;
+          token: string;
+          user_id?: string | null;
+        };
         Update: {
-          created_at?: string
-          device_info?: Json | null
-          id?: string
-          last_seen_at?: string
-          owner_admin_id?: string | null
-          role?: string
-          token?: string
-          user_id?: string | null
-        }
-        Relationships: []
-      }
+          created_at?: string;
+          device_info?: Json | null;
+          id?: string;
+          last_seen_at?: string;
+          owner_admin_id?: string | null;
+          role?: string;
+          token?: string;
+          user_id?: string | null;
+        };
+        Relationships: [];
+      };
       messages: {
         Row: {
-          content: string | null
-          conversation_id: string
-          created_at: string
-          id: string
-          media_kind: string | null
-          media_meta: Json | null
-          media_path: string | null
-          owner_admin_id: string
-          sender_id: string
-        }
+          content: string | null;
+          conversation_id: string;
+          created_at: string;
+          id: string;
+          media_kind: string | null;
+          media_meta: Json | null;
+          media_path: string | null;
+          owner_admin_id: string;
+          sender_id: string;
+        };
         Insert: {
-          content?: string | null
-          conversation_id: string
-          created_at?: string
-          id?: string
-          media_kind?: string | null
-          media_meta?: Json | null
-          media_path?: string | null
-          owner_admin_id: string
-          sender_id: string
-        }
+          content?: string | null;
+          conversation_id: string;
+          created_at?: string;
+          id?: string;
+          media_kind?: string | null;
+          media_meta?: Json | null;
+          media_path?: string | null;
+          owner_admin_id: string;
+          sender_id: string;
+        };
         Update: {
-          content?: string | null
-          conversation_id?: string
-          created_at?: string
-          id?: string
-          media_kind?: string | null
-          media_meta?: Json | null
-          media_path?: string | null
-          owner_admin_id?: string
-          sender_id?: string
-        }
+          content?: string | null;
+          conversation_id?: string;
+          created_at?: string;
+          id?: string;
+          media_kind?: string | null;
+          media_meta?: Json | null;
+          media_path?: string | null;
+          owner_admin_id?: string;
+          sender_id?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "messages_conversation_id_fkey"
-            columns: ["conversation_id"]
-            isOneToOne: false
-            referencedRelation: "conversations"
-            referencedColumns: ["id"]
+            foreignKeyName: "messages_conversation_id_fkey";
+            columns: ["conversation_id"];
+            isOneToOne: false;
+            referencedRelation: "conversations";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       profiles: {
         Row: {
-          assigned_admin_id: string | null
-          created_at: string
-          four_digit_id: string | null
-          id: string
-          is_admin: boolean
-          last_seen_at: string | null
-          name: string
-          name_lower: string | null
-          status: string
-          updated_at: string
-        }
+          assigned_admin_id: string | null;
+          created_at: string;
+          four_digit_id: string | null;
+          id: string;
+          is_admin: boolean;
+          last_seen_at: string | null;
+          name: string;
+          name_lower: string | null;
+          status: string;
+          updated_at: string;
+        };
         Insert: {
-          assigned_admin_id?: string | null
-          created_at?: string
-          four_digit_id?: string | null
-          id: string
-          is_admin?: boolean
-          last_seen_at?: string | null
-          name: string
-          name_lower?: string | null
-          status?: string
-          updated_at?: string
-        }
+          assigned_admin_id?: string | null;
+          created_at?: string;
+          four_digit_id?: string | null;
+          id: string;
+          is_admin?: boolean;
+          last_seen_at?: string | null;
+          name: string;
+          name_lower?: string | null;
+          status?: string;
+          updated_at?: string;
+        };
         Update: {
-          assigned_admin_id?: string | null
-          created_at?: string
-          four_digit_id?: string | null
-          id?: string
-          is_admin?: boolean
-          last_seen_at?: string | null
-          name?: string
-          name_lower?: string | null
-          status?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      shipment_events: {
-        Row: {
-          created_at: string
-          created_by: string | null
-          id: string
-          location: string | null
-          note: string | null
-          shipment_id: string
-          step: Database["public"]["Enums"]["shipment_status"]
-        }
-        Insert: {
-          created_at?: string
-          created_by?: string | null
-          id?: string
-          location?: string | null
-          note?: string | null
-          shipment_id: string
-          step: Database["public"]["Enums"]["shipment_status"]
-        }
-        Update: {
-          created_at?: string
-          created_by?: string | null
-          id?: string
-          location?: string | null
-          note?: string | null
-          shipment_id?: string
-          step?: Database["public"]["Enums"]["shipment_status"]
-        }
-        Relationships: [
-          {
-            foreignKeyName: "shipment_events_shipment_id_fkey"
-            columns: ["shipment_id"]
-            isOneToOne: false
-            referencedRelation: "shipments"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      shipments: {
-        Row: {
-          conversation_id: string | null
-          courier: string | null
-          created_at: string
-          customer_id: string
-          description: string | null
-          destination: string | null
-          estimated_delivery: string | null
-          id: string
-          origin: string | null
-          owner_admin_id: string
-          receiver_name: string | null
-          sender_name: string | null
-          status: Database["public"]["Enums"]["shipment_status"]
-          tracking_number: string
-          updated_at: string
-          weight: string | null
-        }
-        Insert: {
-          conversation_id?: string | null
-          courier?: string | null
-          created_at?: string
-          customer_id: string
-          description?: string | null
-          destination?: string | null
-          estimated_delivery?: string | null
-          id?: string
-          origin?: string | null
-          owner_admin_id: string
-          receiver_name?: string | null
-          sender_name?: string | null
-          status?: Database["public"]["Enums"]["shipment_status"]
-          tracking_number: string
-          updated_at?: string
-          weight?: string | null
-        }
-        Update: {
-          conversation_id?: string | null
-          courier?: string | null
-          created_at?: string
-          customer_id?: string
-          description?: string | null
-          destination?: string | null
-          estimated_delivery?: string | null
-          id?: string
-          origin?: string | null
-          owner_admin_id?: string
-          receiver_name?: string | null
-          sender_name?: string | null
-          status?: Database["public"]["Enums"]["shipment_status"]
-          tracking_number?: string
-          updated_at?: string
-          weight?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "shipments_conversation_id_fkey"
-            columns: ["conversation_id"]
-            isOneToOne: false
-            referencedRelation: "conversations"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
+          assigned_admin_id?: string | null;
+          created_at?: string;
+          four_digit_id?: string | null;
+          id?: string;
+          is_admin?: boolean;
+          last_seen_at?: string | null;
+          name?: string;
+          name_lower?: string | null;
+          status?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       user_roles: {
         Row: {
-          created_at: string
-          id: string
-          role: Database["public"]["Enums"]["app_role"]
-          user_id: string
-        }
+          created_at: string;
+          id: string;
+          role: Database["public"]["Enums"]["app_role"];
+          user_id: string;
+        };
         Insert: {
-          created_at?: string
-          id?: string
-          role: Database["public"]["Enums"]["app_role"]
-          user_id: string
-        }
+          created_at?: string;
+          id?: string;
+          role: Database["public"]["Enums"]["app_role"];
+          user_id: string;
+        };
         Update: {
-          created_at?: string
-          id?: string
-          role?: Database["public"]["Enums"]["app_role"]
-          user_id?: string
-        }
-        Relationships: []
-      }
-    }
+          created_at?: string;
+          id?: string;
+          role?: Database["public"]["Enums"]["app_role"];
+          user_id?: string;
+        };
+        Relationships: [];
+      };
+    };
     Views: {
-      [_ in never]: never
-    }
+      [_ in never]: never;
+    };
     Functions: {
-      [_ in never]: never
-    }
+      [_ in never]: never;
+    };
     Enums: {
-      app_role: "admin" | "user"
+      app_role: "admin" | "user";
       shipment_status:
         | "order_created"
         | "package_received"
@@ -408,130 +302,128 @@ export type Database = {
         | "local_distribution"
         | "out_for_delivery"
         | "delivered"
-        | "paused"
-    }
+        | "paused";
+    };
     CompositeTypes: {
-      [_ in never]: never
-    }
-  }
-}
+      [_ in never]: never;
+    };
+  };
+};
 
-type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">;
 
-type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">];
 
 export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
+    schema: keyof DatabaseWithoutInternals;
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
     : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
+  schema: keyof DatabaseWithoutInternals;
 }
   ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
       DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
-      Row: infer R
+      Row: infer R;
     }
     ? R
     : never
-  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
-        DefaultSchema["Views"])
-    ? (DefaultSchema["Tables"] &
-        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
-        Row: infer R
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] & DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+        Row: infer R;
       }
       ? R
       : never
-    : never
+    : never;
 
 export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
+    schema: keyof DatabaseWithoutInternals;
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
+  schema: keyof DatabaseWithoutInternals;
 }
   ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
-      Insert: infer I
+      Insert: infer I;
     }
     ? I
     : never
   : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
     ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
-        Insert: infer I
+        Insert: infer I;
       }
       ? I
       : never
-    : never
+    : never;
 
 export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
+    schema: keyof DatabaseWithoutInternals;
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
+  schema: keyof DatabaseWithoutInternals;
 }
   ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
-      Update: infer U
+      Update: infer U;
     }
     ? U
     : never
   : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
     ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
-        Update: infer U
+        Update: infer U;
       }
       ? U
       : never
-    : never
+    : never;
 
 export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
   EnumName extends DefaultSchemaEnumNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
+    schema: keyof DatabaseWithoutInternals;
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
     : never = never,
 > = DefaultSchemaEnumNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
+  schema: keyof DatabaseWithoutInternals;
 }
   ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
   : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
     ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
-    : never
+    : never;
 
 export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
   CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
+    schema: keyof DatabaseWithoutInternals;
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
     : never = never,
 > = PublicCompositeTypeNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
+  schema: keyof DatabaseWithoutInternals;
 }
   ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
   : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
     ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
-    : never
+    : never;
 
 export const Constants = {
   public: {
@@ -552,4 +444,4 @@ export const Constants = {
       ],
     },
   },
-} as const
+} as const;

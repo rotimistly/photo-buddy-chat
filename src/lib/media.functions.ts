@@ -4,9 +4,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 export const getSignedMediaUrls = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input) =>
-    z.object({ paths: z.array(z.string().min(1)).max(200) }).parse(input),
-  )
+  .inputValidator((input) => z.object({ paths: z.array(z.string().min(1)).max(200) }).parse(input))
   .handler(async ({ data, context }) => {
     if (data.paths.length === 0) return { urls: {} as Record<string, string> };
     // Use the user's supabase client so RLS on storage.objects gates access.
