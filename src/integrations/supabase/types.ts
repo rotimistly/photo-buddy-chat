@@ -83,6 +83,7 @@ export type Database = {
           ended_at: string | null
           id: string
           owner_admin_id: string
+          room_name: string | null
           started_at: string
           status: string
         }
@@ -94,6 +95,7 @@ export type Database = {
           ended_at?: string | null
           id?: string
           owner_admin_id: string
+          room_name?: string | null
           started_at?: string
           status: string
         }
@@ -105,6 +107,7 @@ export type Database = {
           ended_at?: string | null
           id?: string
           owner_admin_id?: string
+          room_name?: string | null
           started_at?: string
           status?: string
         }
@@ -263,109 +266,6 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
-      }
-      shipment_events: {
-        Row: {
-          created_at: string
-          created_by: string | null
-          id: string
-          location: string | null
-          note: string | null
-          shipment_id: string
-          step: Database["public"]["Enums"]["shipment_status"]
-        }
-        Insert: {
-          created_at?: string
-          created_by?: string | null
-          id?: string
-          location?: string | null
-          note?: string | null
-          shipment_id: string
-          step: Database["public"]["Enums"]["shipment_status"]
-        }
-        Update: {
-          created_at?: string
-          created_by?: string | null
-          id?: string
-          location?: string | null
-          note?: string | null
-          shipment_id?: string
-          step?: Database["public"]["Enums"]["shipment_status"]
-        }
-        Relationships: [
-          {
-            foreignKeyName: "shipment_events_shipment_id_fkey"
-            columns: ["shipment_id"]
-            isOneToOne: false
-            referencedRelation: "shipments"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      shipments: {
-        Row: {
-          conversation_id: string | null
-          courier: string | null
-          created_at: string
-          customer_id: string
-          description: string | null
-          destination: string | null
-          estimated_delivery: string | null
-          id: string
-          origin: string | null
-          owner_admin_id: string
-          receiver_name: string | null
-          sender_name: string | null
-          status: Database["public"]["Enums"]["shipment_status"]
-          tracking_number: string
-          updated_at: string
-          weight: string | null
-        }
-        Insert: {
-          conversation_id?: string | null
-          courier?: string | null
-          created_at?: string
-          customer_id: string
-          description?: string | null
-          destination?: string | null
-          estimated_delivery?: string | null
-          id?: string
-          origin?: string | null
-          owner_admin_id: string
-          receiver_name?: string | null
-          sender_name?: string | null
-          status?: Database["public"]["Enums"]["shipment_status"]
-          tracking_number: string
-          updated_at?: string
-          weight?: string | null
-        }
-        Update: {
-          conversation_id?: string | null
-          courier?: string | null
-          created_at?: string
-          customer_id?: string
-          description?: string | null
-          destination?: string | null
-          estimated_delivery?: string | null
-          id?: string
-          origin?: string | null
-          owner_admin_id?: string
-          receiver_name?: string | null
-          sender_name?: string | null
-          status?: Database["public"]["Enums"]["shipment_status"]
-          tracking_number?: string
-          updated_at?: string
-          weight?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "shipments_conversation_id_fkey"
-            columns: ["conversation_id"]
-            isOneToOne: false
-            referencedRelation: "conversations"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       user_roles: {
         Row: {
