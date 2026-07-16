@@ -20,7 +20,10 @@ function NotFoundComponent() {
       <div className="max-w-md text-center">
         <h1 className="text-7xl font-display text-foreground">404</h1>
         <p className="mt-4 text-muted-foreground">This page doesn't exist.</p>
-        <Link to="/" className="mt-6 inline-flex rounded-full bg-primary px-5 py-2 text-sm font-medium text-primary-foreground">
+        <Link
+          to="/"
+          className="mt-6 inline-flex rounded-full bg-primary px-5 py-2 text-sm font-medium text-primary-foreground"
+        >
           Go home
         </Link>
       </div>
@@ -40,10 +43,18 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
         <h1 className="text-xl font-semibold text-foreground">Something went wrong</h1>
         <p className="mt-2 text-sm text-muted-foreground">Try again or head back home.</p>
         <div className="mt-6 flex justify-center gap-2">
-          <button onClick={() => { router.invalidate(); reset(); }} className="rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground">
+          <button
+            onClick={() => {
+              router.invalidate();
+              reset();
+            }}
+            className="rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
+          >
             Try again
           </button>
-          <a href="/" className="rounded-full border border-input bg-background px-4 py-2 text-sm">Home</a>
+          <a href="/" className="rounded-full border border-input bg-background px-4 py-2 text-sm">
+            Home
+          </a>
         </div>
       </div>
     </div>
@@ -56,20 +67,35 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "Support — talk to our team" },
-      { name: "description", content: "Sign in with your name and a 4-digit code to chat directly with a support administrator." },
+      {
+        name: "description",
+        content:
+          "Sign in with your name and a 4-digit code to chat directly with a support administrator.",
+      },
       { property: "og:title", content: "Support — talk to our team" },
-      { property: "og:description", content: "Sign in with your name and a 4-digit code to chat directly with a support administrator." },
+      {
+        property: "og:description",
+        content:
+          "Sign in with your name and a 4-digit code to chat directly with a support administrator.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:title", content: "Support — talk to our team" },
-      { name: "twitter:description", content: "Sign in with your name and a 4-digit code to chat directly with a support administrator." },
+      {
+        name: "twitter:description",
+        content:
+          "Sign in with your name and a 4-digit code to chat directly with a support administrator.",
+      },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
       { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
-      { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap" },
+      {
+        rel: "stylesheet",
+        href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap",
+      },
     ],
   }),
   shellComponent: RootShell,
@@ -81,8 +107,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 function RootShell({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
-      <head><HeadContent /></head>
-      <body>{children}<Scripts /></body>
+      <head>
+        <HeadContent />
+      </head>
+      <body>
+        {children}
+        <Scripts />
+      </body>
     </html>
   );
 }

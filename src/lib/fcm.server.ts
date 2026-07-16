@@ -32,31 +32,28 @@ function getClient(): { jwt: JWT; projectId: string } {
 }
 
 async function sendOne(token: string, payload: FcmPayload, accessToken: string, projectId: string) {
-  const res = await fetch(
-    `https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        message: {
-          token,
-          notification: { title: payload.title, body: payload.body },
-          data: {
-            url: payload.url,
-            tag: payload.tag ?? "",
-            ...(payload.data ?? {}),
-          },
-          webpush: {
-            fcm_options: { link: payload.url },
-            notification: { tag: payload.tag ?? "default" },
-          },
-        },
-      }),
+  const res = await fetch(`https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
     },
-  );
+    body: JSON.stringify({
+      message: {
+        token,
+        notification: { title: payload.title, body: payload.body },
+        data: {
+          url: payload.url,
+          tag: payload.tag ?? "",
+          ...(payload.data ?? {}),
+        },
+        webpush: {
+          fcm_options: { link: payload.url },
+          notification: { tag: payload.tag ?? "default" },
+        },
+      },
+    }),
+  });
   if (!res.ok) {
     const text = await res.text().catch(() => "");
     return { ok: false, status: res.status, body: text };
@@ -76,7 +73,11 @@ export async function sendFcmToTokens(tokens: string[], payload: FcmPayload) {
     tokens.map(async (t) => {
       const r = await sendOne(t, payload, accessToken, projectId);
       if (r.ok) sent++;
-      else if (r.status === 404 || r.status === 400 || (r.body && r.body.includes("UNREGISTERED"))) {
+      else if (
+        r.status === 404 ||
+        r.status === 400 ||
+        (r.body && r.body.includes("UNREGISTERED"))
+      ) {
         invalid.push(t);
       }
     }),
