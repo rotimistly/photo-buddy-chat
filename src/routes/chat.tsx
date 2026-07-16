@@ -143,7 +143,9 @@ function ChatPage() {
       try {
         const { urls } = await getSignedMediaUrls({ data: { paths } });
         setSigned(urls);
-      } catch { void 0; }
+      } catch {
+        void 0;
+      }
     }
   }, [conv]);
 

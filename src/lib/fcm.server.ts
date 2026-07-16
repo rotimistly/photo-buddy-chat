@@ -87,7 +87,9 @@ export async function sendFcmToTokens(tokens: string[], payload: FcmPayload) {
     try {
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
       await supabaseAdmin.from("fcm_tokens").delete().in("token", invalid);
-    } catch { void 0; }
+    } catch {
+      void 0;
+    }
   }
   return { sent, invalid };
 }

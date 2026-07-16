@@ -42,7 +42,9 @@ export async function connectLivekitCall(opts: {
   async function disconnect() {
     try {
       await room.localParticipant.setMicrophoneEnabled(false);
-    } catch { void 0; }
+    } catch {
+      void 0;
+    }
     attachedEls.forEach((el) => el.remove());
     attachedEls.clear();
     await room.disconnect();

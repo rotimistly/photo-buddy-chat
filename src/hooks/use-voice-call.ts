@@ -45,7 +45,9 @@ export function useVoiceCall(selfId: string | null) {
         await endLivekitCall({
           data: { room_id: rid, status: finalStatus, duration_seconds: duration },
         });
-      } catch { void 0; }
+      } catch {
+        void 0;
+      }
     }
     // reset to idle shortly so UI clears
     setTimeout(() => setStatus((s) => (s === "ended" ? "idle" : s)), 800);
@@ -194,7 +196,9 @@ export function useVoiceCall(selfId: string | null) {
     setIncoming(null);
     try {
       await endLivekitCall({ data: { room_id: rid, status: "declined", duration_seconds: 0 } });
-    } catch { void 0; }
+    } catch {
+      void 0;
+    }
   }, [incoming]);
 
   const hangup = useCallback(async () => {
