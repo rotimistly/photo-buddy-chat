@@ -78,8 +78,8 @@ export type Database = {
         Row: {
           callee_id: string
           caller_id: string
-          conversation_id: string
-          duration_seconds: number
+          conversation_id: string | null
+          duration_seconds: number | null
           ended_at: string | null
           id: string
           owner_admin_id: string
@@ -90,8 +90,8 @@ export type Database = {
         Insert: {
           callee_id: string
           caller_id: string
-          conversation_id: string
-          duration_seconds?: number
+          conversation_id?: string | null
+          duration_seconds?: number | null
           ended_at?: string | null
           id?: string
           owner_admin_id: string
@@ -102,8 +102,8 @@ export type Database = {
         Update: {
           callee_id?: string
           caller_id?: string
-          conversation_id?: string
-          duration_seconds?: number
+          conversation_id?: string | null
+          duration_seconds?: number | null
           ended_at?: string | null
           id?: string
           owner_admin_id?: string
