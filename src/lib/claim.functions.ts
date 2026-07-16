@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function assertIsAdmin(supabase: any, userId: string) {
   const { data, error } = await supabase
     .from("user_roles")
