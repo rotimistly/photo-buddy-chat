@@ -113,7 +113,7 @@ export const startLivekitCall = createServerFn({ method: "POST" })
           tag: `call-${row.id}`,
         });
       }
-    } catch {}
+    } catch { void 0; }
 
     const token = await mintToken(context.userId, roomName);
     return {
@@ -199,7 +199,7 @@ export const endLivekitCall = createServerFn({ method: "POST" })
         );
         await svc.deleteRoom(r.room_name).catch(() => {});
       }
-    } catch {}
+    } catch { void 0; }
 
     return { ok: true };
   });
