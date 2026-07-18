@@ -74,53 +74,6 @@ export type Database = {
         }
         Relationships: []
       }
-      call_history: {
-        Row: {
-          callee_id: string
-          caller_id: string
-          conversation_id: string | null
-          duration_seconds: number | null
-          ended_at: string | null
-          id: string
-          owner_admin_id: string
-          room_name: string | null
-          started_at: string
-          status: string
-        }
-        Insert: {
-          callee_id: string
-          caller_id: string
-          conversation_id?: string | null
-          duration_seconds?: number | null
-          ended_at?: string | null
-          id?: string
-          owner_admin_id: string
-          room_name?: string | null
-          started_at?: string
-          status: string
-        }
-        Update: {
-          callee_id?: string
-          caller_id?: string
-          conversation_id?: string | null
-          duration_seconds?: number | null
-          ended_at?: string | null
-          id?: string
-          owner_admin_id?: string
-          room_name?: string | null
-          started_at?: string
-          status?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "call_history_conversation_id_fkey"
-            columns: ["conversation_id"]
-            isOneToOne: false
-            referencedRelation: "conversations"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       conversations: {
         Row: {
           created_at: string
