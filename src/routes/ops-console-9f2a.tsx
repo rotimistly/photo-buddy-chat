@@ -627,15 +627,11 @@ function AdminChat({
   conv,
   user,
   onRelease,
-  onCall,
-  canCall,
 }: {
   session: Session;
   conv: Conversation;
   user: OwnedUser;
   onRelease: () => void;
-  onCall: () => void;
-  canCall: boolean;
 }) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [signed, setSigned] = useState<Record<string, string>>({});
