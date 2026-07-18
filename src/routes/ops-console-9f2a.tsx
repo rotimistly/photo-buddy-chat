@@ -50,7 +50,7 @@ type Message = {
   media_kind: string | null;
   created_at: string;
 };
-type AdminPeer = { id: string; name: string };
+
 
 function OpsConsole() {
   const [phase, setPhase] = useState<"loading" | "auth" | "denied" | "workspace">("loading");
