@@ -291,10 +291,7 @@ function ChatPage() {
     setRecording(false);
   };
 
-  const beginCall = async () => {
-    if (!conv || !userId) return;
-    await voice.call(conv.owner_admin_id, conv.id);
-  };
+
 
   if (loading) {
     return (
