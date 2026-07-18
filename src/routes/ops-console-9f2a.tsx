@@ -751,10 +751,29 @@ function AdminChat({
       rec.onstop = async () => {
         stream.getTracks().forEach((t) => t.stop());
         const blob = new Blob(chunks, { type: "audio/webm" });
-        await uploadFile(
-          new File([blob], `voice-${Date.now()}.webm`, { type: "audio/webm" }),
-          "voice",
-        );
+        setSending(true);
+        try {
+          // Read raw recording -> send to ElevenLabs speech-to-speech server fn.
+          // The raw mic audio is NEVER uploaded to storage; only the cloned MP3.
+          const buf = new Uint8Array(await blob.arrayBuffer());
+          let binary = "";
+          for (let i = 0; i < buf.byteLength; i++) binary += String.fromCharCode(buf[i]);
+          const b64 = btoa(binary);
+          await sendAdminVoiceNote({
+            data: {
+              conversation_id: conv.id,
+              audio_base64: b64,
+              mime_type: "audio/webm",
+            },
+          });
+          notifyRecipients({
+            data: { conversationId: conv.id, kind: "message", preview: "🎤 Voice note" },
+          }).catch(() => {});
+        } catch (e: unknown) {
+          toast.error((e instanceof Error ? e.message : null) ?? "Voice note failed");
+        } finally {
+          setSending(false);
+        }
       };
       rec.start();
       recRef.current = rec;
