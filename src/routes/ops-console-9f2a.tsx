@@ -18,7 +18,6 @@ import {
   MessageSquare,
   Megaphone,
   Search,
-  Phone,
   Hourglass,
   UserPlus,
   X,
@@ -30,8 +29,7 @@ import { claimUser, releaseUser } from "@/lib/claim.functions";
 import { getSignedMediaUrls } from "@/lib/media.functions";
 import { notifyRecipients, notifyAnnouncement } from "@/lib/fcm.functions";
 import { ensureFcmSubscribed } from "@/lib/fcm-client";
-import { useVoiceCall } from "@/hooks/use-voice-call";
-import { CallControls, IncomingCallDialog } from "@/components/call-ui";
+import { sendAdminVoiceNote } from "@/lib/elevenlabs.functions";
 
 export const Route = createFileRoute("/ops-console-9f2a")({
   head: () => ({
