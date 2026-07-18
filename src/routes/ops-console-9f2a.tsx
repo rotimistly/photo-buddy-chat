@@ -248,7 +248,7 @@ function AdminAuthCard({ onSignedIn }: { onSignedIn: () => void }) {
 
 function AdminWorkspace({ session }: { session: Session }) {
   const navigate = useNavigate();
-  type Tab = "chats" | "waiting" | "announcements" | "history";
+  type Tab = "chats" | "waiting" | "announcements";
   const [tab, setTab] = useState<Tab>("chats");
   const [waiting, setWaiting] = useState<WaitingUser[]>([]);
   const [users, setUsers] = useState<OwnedUser[]>([]);
@@ -256,12 +256,8 @@ function AdminWorkspace({ session }: { session: Session }) {
   const [activeUserId, setActiveUserId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [stats, setStats] = useState({ users: 0, waiting: 0, messages: 0 });
-  const [adminPeers, setAdminPeers] = useState<AdminPeer[]>([]);
-
-  const voice = useVoiceCall(session.userId);
 
   const signOut = async () => {
-    await voice.hangup();
     await supabase.auth.signOut();
     navigate({ to: "/" });
   };
