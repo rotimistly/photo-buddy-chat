@@ -779,9 +779,6 @@ function AdminChat({
           <p className="truncate font-medium">{user.name}</p>
           <p className="truncate text-xs text-muted-foreground">#{user.four_digit_id}</p>
         </div>
-        <Button size="sm" variant="outline" onClick={onCall} disabled={!canCall}>
-          <Phone className="mr-1.5 h-4 w-4" /> Call
-        </Button>
         <Button size="sm" variant="ghost" onClick={onRelease}>
           Release
         </Button>
