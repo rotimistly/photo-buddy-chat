@@ -203,7 +203,6 @@ function ChatPage() {
   }, [messages.length]);
 
   const signOut = async () => {
-    await voice.hangup();
     await supabase.auth.signOut();
     navigate({ to: "/" });
   };
