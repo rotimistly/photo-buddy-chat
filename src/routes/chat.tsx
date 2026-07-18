@@ -328,27 +328,6 @@ function ChatPage() {
         name={profile.name}
         subtitle={adminName ? `Chatting with ${adminName}` : "Assigned"}
         onSignOut={signOut}
-        right={
-          voice.inCall ? (
-            <CallControls
-              status={voice.status}
-              muted={voice.muted}
-              onHangup={voice.hangup}
-              onToggleMute={voice.toggleMute}
-              peerName={adminName}
-            />
-          ) : (
-            <Button variant="outline" size="sm" onClick={beginCall}>
-              <Phone className="mr-1.5 h-4 w-4" /> Call
-            </Button>
-          )
-        }
-      />
-      <div ref={voice.audioContainerRef} className="hidden" aria-hidden />
-      <IncomingCallDialog
-        incoming={voice.incoming}
-        onAccept={voice.accept}
-        onDecline={voice.decline}
       />
 
       {announcements[0] && (
