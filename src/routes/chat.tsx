@@ -12,7 +12,6 @@ import {
   Square,
   Loader2,
   Hourglass,
-  Phone,
   Megaphone,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
@@ -20,8 +19,6 @@ import { cn } from "@/lib/utils";
 import { getSignedMediaUrls } from "@/lib/media.functions";
 import { notifyRecipients } from "@/lib/fcm.functions";
 import { ensureFcmSubscribed } from "@/lib/fcm-client";
-import { useVoiceCall } from "@/hooks/use-voice-call";
-import { CallControls, IncomingCallDialog } from "@/components/call-ui";
 
 export const Route = createFileRoute("/chat")({
   head: () => ({
