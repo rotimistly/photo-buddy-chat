@@ -62,7 +62,7 @@ function ChatPage() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const recRef = useRef<MediaRecorder | null>(null);
 
-  const voice = useVoiceCall(userId);
+  
 
   useEffect(() => {
     (async () => {
