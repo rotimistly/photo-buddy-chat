@@ -387,44 +387,8 @@ function AdminWorkspace({ session }: { session: Session }) {
             active={tab === "announcements"}
             onClick={() => setTab("announcements")}
           />
-          <NavItem
-            icon={<Phone className="h-4 w-4" />}
-            label="Call history"
-            active={tab === "history"}
-            onClick={() => setTab("history")}
-          />
         </nav>
-        {adminPeers.length > 0 && (
-          <div className="border-t border-border p-3">
-            <p className="mb-2 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-              Admin peers
-            </p>
-            <ul className="space-y-1">
-              {adminPeers.map((p) => (
-                <li
-                  key={p.id}
-                  className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent/60"
-                >
-                  <div className="grid h-6 w-6 place-items-center rounded-full bg-accent text-[10px] font-medium">
-                    {p.name.charAt(0).toUpperCase()}
-                  </div>
-                  <span className="min-w-0 flex-1 truncate">{p.name}</span>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-7 w-7"
-                    onClick={() => voice.call(p.id, null)}
-                    disabled={voice.inCall}
-                    title={`Call ${p.name}`}
-                  >
-                    <Phone className="h-3.5 w-3.5" />
-                  </Button>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-        <div className="border-t border-border p-4 text-xs text-muted-foreground">
+        <div className="mt-auto border-t border-border p-4 text-xs text-muted-foreground">
           <p>
             <Users className="mr-1 inline h-3 w-3" /> {stats.users} users
           </p>
@@ -435,27 +399,8 @@ function AdminWorkspace({ session }: { session: Session }) {
       </aside>
 
       <main className="flex flex-1 flex-col">
-        <div ref={voice.audioContainerRef} className="hidden" aria-hidden />
-        <IncomingCallDialog
-          incoming={voice.incoming}
-          onAccept={voice.accept}
-          onDecline={voice.decline}
-        />
-        {voice.inCall && (
-          <div className="border-b border-border bg-card/60 px-4 py-2">
-            <div className="mx-auto flex max-w-3xl items-center justify-end">
-              <CallControls
-                status={voice.status}
-                muted={voice.muted}
-                onHangup={voice.hangup}
-                onToggleMute={voice.toggleMute}
-              />
-            </div>
-          </div>
-        )}
         {tab === "waiting" && <WaitingTab waiting={waiting} onClaim={handleClaim} />}
         {tab === "announcements" && <AnnouncementsTab session={session} />}
-        {tab === "history" && <CallHistoryTab session={session} />}
         {tab === "chats" && (
           <div className="flex flex-1">
             <div className="flex w-72 flex-col border-r border-border bg-card">
@@ -506,8 +451,6 @@ function AdminWorkspace({ session }: { session: Session }) {
                   conv={activeConv}
                   user={activeUser}
                   onRelease={() => handleRelease(activeUser.id)}
-                  onCall={() => voice.call(activeUser.id, activeConv.id)}
-                  canCall={!voice.inCall}
                 />
               )}
             </div>
