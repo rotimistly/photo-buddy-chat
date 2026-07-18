@@ -292,21 +292,8 @@ function AdminWorkspace({ session }: { session: Session }) {
     setStats({ users: (mine ?? []).length, waiting: (w ?? []).length, messages: msgCount ?? 0 });
   }, [session.userId]);
 
-  // Load other admin peers (for admin↔admin calls).
-  const loadAdminPeers = useCallback(async () => {
-    const { data: roles } = await supabase.from("user_roles").select("user_id").eq("role", "admin");
-    const ids = (roles ?? []).map((r) => r.user_id as string).filter((id) => id !== session.userId);
-    if (ids.length === 0) {
-      setAdminPeers([]);
-      return;
-    }
-    const { data: profs } = await supabase.from("profiles").select("id, name").in("id", ids);
-    setAdminPeers((profs ?? []) as AdminPeer[]);
-  }, [session.userId]);
-
   useEffect(() => {
     loadUsers();
-    loadAdminPeers();
     const chP = supabase
       .channel(`ops-profiles-${session.userId}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, () =>
@@ -323,7 +310,7 @@ function AdminWorkspace({ session }: { session: Session }) {
       supabase.removeChannel(chP);
       supabase.removeChannel(chC);
     };
-  }, [session.userId, loadUsers, loadAdminPeers]);
+  }, [session.userId, loadUsers]);
 
   const handleClaim = async (userId: string) => {
     try {
