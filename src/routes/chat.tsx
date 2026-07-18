@@ -12,7 +12,6 @@ import {
   Square,
   Loader2,
   Hourglass,
-  Phone,
   Megaphone,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
@@ -20,8 +19,6 @@ import { cn } from "@/lib/utils";
 import { getSignedMediaUrls } from "@/lib/media.functions";
 import { notifyRecipients } from "@/lib/fcm.functions";
 import { ensureFcmSubscribed } from "@/lib/fcm-client";
-import { useVoiceCall } from "@/hooks/use-voice-call";
-import { CallControls, IncomingCallDialog } from "@/components/call-ui";
 
 export const Route = createFileRoute("/chat")({
   head: () => ({
@@ -65,7 +62,7 @@ function ChatPage() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const recRef = useRef<MediaRecorder | null>(null);
 
-  const voice = useVoiceCall(userId);
+  
 
   useEffect(() => {
     (async () => {
@@ -206,7 +203,6 @@ function ChatPage() {
   }, [messages.length]);
 
   const signOut = async () => {
-    await voice.hangup();
     await supabase.auth.signOut();
     navigate({ to: "/" });
   };
@@ -295,10 +291,7 @@ function ChatPage() {
     setRecording(false);
   };
 
-  const beginCall = async () => {
-    if (!conv || !userId) return;
-    await voice.call(conv.owner_admin_id, conv.id);
-  };
+
 
   if (loading) {
     return (
@@ -335,27 +328,6 @@ function ChatPage() {
         name={profile.name}
         subtitle={adminName ? `Chatting with ${adminName}` : "Assigned"}
         onSignOut={signOut}
-        right={
-          voice.inCall ? (
-            <CallControls
-              status={voice.status}
-              muted={voice.muted}
-              onHangup={voice.hangup}
-              onToggleMute={voice.toggleMute}
-              peerName={adminName}
-            />
-          ) : (
-            <Button variant="outline" size="sm" onClick={beginCall}>
-              <Phone className="mr-1.5 h-4 w-4" /> Call
-            </Button>
-          )
-        }
-      />
-      <div ref={voice.audioContainerRef} className="hidden" aria-hidden />
-      <IncomingCallDialog
-        incoming={voice.incoming}
-        onAccept={voice.accept}
-        onDecline={voice.decline}
       />
 
       {announcements[0] && (

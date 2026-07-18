@@ -18,7 +18,6 @@ import {
   MessageSquare,
   Megaphone,
   Search,
-  Phone,
   Hourglass,
   UserPlus,
   X,
@@ -30,8 +29,7 @@ import { claimUser, releaseUser } from "@/lib/claim.functions";
 import { getSignedMediaUrls } from "@/lib/media.functions";
 import { notifyRecipients, notifyAnnouncement } from "@/lib/fcm.functions";
 import { ensureFcmSubscribed } from "@/lib/fcm-client";
-import { useVoiceCall } from "@/hooks/use-voice-call";
-import { CallControls, IncomingCallDialog } from "@/components/call-ui";
+import { sendAdminVoiceNote } from "@/lib/elevenlabs.functions";
 
 export const Route = createFileRoute("/ops-console-9f2a")({
   head: () => ({
@@ -52,7 +50,7 @@ type Message = {
   media_kind: string | null;
   created_at: string;
 };
-type AdminPeer = { id: string; name: string };
+
 
 function OpsConsole() {
   const [phase, setPhase] = useState<"loading" | "auth" | "denied" | "workspace">("loading");
@@ -250,7 +248,7 @@ function AdminAuthCard({ onSignedIn }: { onSignedIn: () => void }) {
 
 function AdminWorkspace({ session }: { session: Session }) {
   const navigate = useNavigate();
-  type Tab = "chats" | "waiting" | "announcements" | "history";
+  type Tab = "chats" | "waiting" | "announcements";
   const [tab, setTab] = useState<Tab>("chats");
   const [waiting, setWaiting] = useState<WaitingUser[]>([]);
   const [users, setUsers] = useState<OwnedUser[]>([]);
@@ -258,12 +256,8 @@ function AdminWorkspace({ session }: { session: Session }) {
   const [activeUserId, setActiveUserId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [stats, setStats] = useState({ users: 0, waiting: 0, messages: 0 });
-  const [adminPeers, setAdminPeers] = useState<AdminPeer[]>([]);
-
-  const voice = useVoiceCall(session.userId);
 
   const signOut = async () => {
-    await voice.hangup();
     await supabase.auth.signOut();
     navigate({ to: "/" });
   };
@@ -298,21 +292,8 @@ function AdminWorkspace({ session }: { session: Session }) {
     setStats({ users: (mine ?? []).length, waiting: (w ?? []).length, messages: msgCount ?? 0 });
   }, [session.userId]);
 
-  // Load other admin peers (for admin↔admin calls).
-  const loadAdminPeers = useCallback(async () => {
-    const { data: roles } = await supabase.from("user_roles").select("user_id").eq("role", "admin");
-    const ids = (roles ?? []).map((r) => r.user_id as string).filter((id) => id !== session.userId);
-    if (ids.length === 0) {
-      setAdminPeers([]);
-      return;
-    }
-    const { data: profs } = await supabase.from("profiles").select("id, name").in("id", ids);
-    setAdminPeers((profs ?? []) as AdminPeer[]);
-  }, [session.userId]);
-
   useEffect(() => {
     loadUsers();
-    loadAdminPeers();
     const chP = supabase
       .channel(`ops-profiles-${session.userId}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, () =>
@@ -329,7 +310,7 @@ function AdminWorkspace({ session }: { session: Session }) {
       supabase.removeChannel(chP);
       supabase.removeChannel(chC);
     };
-  }, [session.userId, loadUsers, loadAdminPeers]);
+  }, [session.userId, loadUsers]);
 
   const handleClaim = async (userId: string) => {
     try {
@@ -406,44 +387,8 @@ function AdminWorkspace({ session }: { session: Session }) {
             active={tab === "announcements"}
             onClick={() => setTab("announcements")}
           />
-          <NavItem
-            icon={<Phone className="h-4 w-4" />}
-            label="Call history"
-            active={tab === "history"}
-            onClick={() => setTab("history")}
-          />
         </nav>
-        {adminPeers.length > 0 && (
-          <div className="border-t border-border p-3">
-            <p className="mb-2 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-              Admin peers
-            </p>
-            <ul className="space-y-1">
-              {adminPeers.map((p) => (
-                <li
-                  key={p.id}
-                  className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent/60"
-                >
-                  <div className="grid h-6 w-6 place-items-center rounded-full bg-accent text-[10px] font-medium">
-                    {p.name.charAt(0).toUpperCase()}
-                  </div>
-                  <span className="min-w-0 flex-1 truncate">{p.name}</span>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-7 w-7"
-                    onClick={() => voice.call(p.id, null)}
-                    disabled={voice.inCall}
-                    title={`Call ${p.name}`}
-                  >
-                    <Phone className="h-3.5 w-3.5" />
-                  </Button>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-        <div className="border-t border-border p-4 text-xs text-muted-foreground">
+        <div className="mt-auto border-t border-border p-4 text-xs text-muted-foreground">
           <p>
             <Users className="mr-1 inline h-3 w-3" /> {stats.users} users
           </p>
@@ -454,27 +399,8 @@ function AdminWorkspace({ session }: { session: Session }) {
       </aside>
 
       <main className="flex flex-1 flex-col">
-        <div ref={voice.audioContainerRef} className="hidden" aria-hidden />
-        <IncomingCallDialog
-          incoming={voice.incoming}
-          onAccept={voice.accept}
-          onDecline={voice.decline}
-        />
-        {voice.inCall && (
-          <div className="border-b border-border bg-card/60 px-4 py-2">
-            <div className="mx-auto flex max-w-3xl items-center justify-end">
-              <CallControls
-                status={voice.status}
-                muted={voice.muted}
-                onHangup={voice.hangup}
-                onToggleMute={voice.toggleMute}
-              />
-            </div>
-          </div>
-        )}
         {tab === "waiting" && <WaitingTab waiting={waiting} onClaim={handleClaim} />}
         {tab === "announcements" && <AnnouncementsTab session={session} />}
-        {tab === "history" && <CallHistoryTab session={session} />}
         {tab === "chats" && (
           <div className="flex flex-1">
             <div className="flex w-72 flex-col border-r border-border bg-card">
@@ -525,8 +451,6 @@ function AdminWorkspace({ session }: { session: Session }) {
                   conv={activeConv}
                   user={activeUser}
                   onRelease={() => handleRelease(activeUser.id)}
-                  onCall={() => voice.call(activeUser.id, activeConv.id)}
-                  canCall={!voice.inCall}
                 />
               )}
             </div>
@@ -697,65 +621,17 @@ function AnnouncementsTab({ session }: { session: Session }) {
   );
 }
 
-type CallRow = {
-  id: string;
-  caller_id: string;
-  callee_id: string;
-  status: string;
-  duration_seconds: number | null;
-  started_at: string;
-  ended_at: string | null;
-};
-
-function CallHistoryTab({ session }: { session: Session }) {
-  const [items, setItems] = useState<CallRow[]>([]);
-  useEffect(() => {
-    supabase
-      .from("call_history")
-      .select("id, caller_id, callee_id, status, duration_seconds, started_at, ended_at")
-      .or(`caller_id.eq.${session.userId},callee_id.eq.${session.userId}`)
-      .order("started_at", { ascending: false })
-      .limit(200)
-      .then(({ data }) => setItems((data ?? []) as CallRow[]));
-  }, [session.userId]);
-  return (
-    <div className="flex-1 overflow-y-auto p-6">
-      <div className="mx-auto max-w-3xl">
-        <h1 className="font-display text-2xl">Call history</h1>
-        <div className="mt-4 divide-y divide-border rounded-2xl border border-border bg-card">
-          {items.length === 0 && (
-            <p className="p-8 text-center text-sm text-muted-foreground">No calls yet.</p>
-          )}
-          {items.map((c) => (
-            <div key={c.id} className="flex items-center gap-3 p-4 text-sm">
-              <Phone className="h-4 w-4 text-muted-foreground" />
-              <span className="flex-1 capitalize">{c.status}</span>
-              <span className="text-muted-foreground">{c.duration_seconds ?? 0}s</span>
-              <span className="text-xs text-muted-foreground">
-                {formatDistanceToNow(new Date(c.started_at), { addSuffix: true })}
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
 
 function AdminChat({
   session,
   conv,
   user,
   onRelease,
-  onCall,
-  canCall,
 }: {
   session: Session;
   conv: Conversation;
   user: OwnedUser;
   onRelease: () => void;
-  onCall: () => void;
-  canCall: boolean;
 }) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [signed, setSigned] = useState<Record<string, string>>({});
@@ -875,10 +751,29 @@ function AdminChat({
       rec.onstop = async () => {
         stream.getTracks().forEach((t) => t.stop());
         const blob = new Blob(chunks, { type: "audio/webm" });
-        await uploadFile(
-          new File([blob], `voice-${Date.now()}.webm`, { type: "audio/webm" }),
-          "voice",
-        );
+        setSending(true);
+        try {
+          // Read raw recording -> send to ElevenLabs speech-to-speech server fn.
+          // The raw mic audio is NEVER uploaded to storage; only the cloned MP3.
+          const buf = new Uint8Array(await blob.arrayBuffer());
+          let binary = "";
+          for (let i = 0; i < buf.byteLength; i++) binary += String.fromCharCode(buf[i]);
+          const b64 = btoa(binary);
+          await sendAdminVoiceNote({
+            data: {
+              conversation_id: conv.id,
+              audio_base64: b64,
+              mime_type: "audio/webm",
+            },
+          });
+          notifyRecipients({
+            data: { conversationId: conv.id, kind: "message", preview: "🎤 Voice note" },
+          }).catch(() => {});
+        } catch (e: unknown) {
+          toast.error((e instanceof Error ? e.message : null) ?? "Voice note failed");
+        } finally {
+          setSending(false);
+        }
       };
       rec.start();
       recRef.current = rec;
@@ -903,9 +798,6 @@ function AdminChat({
           <p className="truncate font-medium">{user.name}</p>
           <p className="truncate text-xs text-muted-foreground">#{user.four_digit_id}</p>
         </div>
-        <Button size="sm" variant="outline" onClick={onCall} disabled={!canCall}>
-          <Phone className="mr-1.5 h-4 w-4" /> Call
-        </Button>
         <Button size="sm" variant="ghost" onClick={onRelease}>
           Release
         </Button>
