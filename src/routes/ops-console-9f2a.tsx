@@ -621,50 +621,6 @@ function AnnouncementsTab({ session }: { session: Session }) {
   );
 }
 
-type CallRow = {
-  id: string;
-  caller_id: string;
-  callee_id: string;
-  status: string;
-  duration_seconds: number | null;
-  started_at: string;
-  ended_at: string | null;
-};
-
-function CallHistoryTab({ session }: { session: Session }) {
-  const [items, setItems] = useState<CallRow[]>([]);
-  useEffect(() => {
-    supabase
-      .from("call_history")
-      .select("id, caller_id, callee_id, status, duration_seconds, started_at, ended_at")
-      .or(`caller_id.eq.${session.userId},callee_id.eq.${session.userId}`)
-      .order("started_at", { ascending: false })
-      .limit(200)
-      .then(({ data }) => setItems((data ?? []) as CallRow[]));
-  }, [session.userId]);
-  return (
-    <div className="flex-1 overflow-y-auto p-6">
-      <div className="mx-auto max-w-3xl">
-        <h1 className="font-display text-2xl">Call history</h1>
-        <div className="mt-4 divide-y divide-border rounded-2xl border border-border bg-card">
-          {items.length === 0 && (
-            <p className="p-8 text-center text-sm text-muted-foreground">No calls yet.</p>
-          )}
-          {items.map((c) => (
-            <div key={c.id} className="flex items-center gap-3 p-4 text-sm">
-              <Phone className="h-4 w-4 text-muted-foreground" />
-              <span className="flex-1 capitalize">{c.status}</span>
-              <span className="text-muted-foreground">{c.duration_seconds ?? 0}s</span>
-              <span className="text-xs text-muted-foreground">
-                {formatDistanceToNow(new Date(c.started_at), { addSuffix: true })}
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
 
 function AdminChat({
   session,
