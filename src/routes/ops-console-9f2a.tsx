@@ -29,7 +29,7 @@ import { claimUser, releaseUser } from "@/lib/claim.functions";
 import { getSignedMediaUrls } from "@/lib/media.functions";
 import { notifyRecipients, notifyAnnouncement } from "@/lib/fcm.functions";
 import { ensureFcmSubscribed } from "@/lib/fcm-client";
-import { sendAdminVoiceNote } from "@/lib/elevenlabs.functions";
+import { sendAdminVoiceNote } from "@/lib/voice-notes.functions";
 
 export const Route = createFileRoute("/ops-console-9f2a")({
   head: () => ({
@@ -753,7 +753,7 @@ function AdminChat({
         const blob = new Blob(chunks, { type: "audio/webm" });
         setSending(true);
         try {
-          // Read raw recording -> send to ElevenLabs speech-to-speech server fn.
+          // Read raw recording -> send to AI voice server fn (STT -> TTS).
           // The raw mic audio is NEVER uploaded to storage; only the cloned MP3.
           const buf = new Uint8Array(await blob.arrayBuffer());
           let binary = "";
