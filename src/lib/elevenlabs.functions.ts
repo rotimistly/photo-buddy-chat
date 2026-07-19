@@ -3,36 +3,33 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 /**
- * ONE cloned voice for every admin. Never change per-admin — customers must
- * always hear this exact voice for every admin voice note.
+ * Voice notes pipeline (Lovable AI Gateway — no third-party voice cloning):
+ *   admin mic recording (webm/opus)
+ *     -> STT (openai/gpt-4o-mini-transcribe)  -> transcript text
+ *     -> TTS (openai/gpt-4o-mini-tts, voice=ADMIN_VOICE) -> synthesized mp3
+ *     -> Supabase Storage + messages row (media_kind="voice")
+ *
+ * The raw admin recording is NEVER persisted or delivered to the customer.
+ * Every admin uses the same AI voice below.
  */
-const ADMIN_VOICE_ID = "lUTamkMw7gOzZbFIwmq4";
+const ADMIN_VOICE = "onyx"; // mature, professional, male-presenting AI voice
 
 const input = z.object({
   conversation_id: z.string().uuid(),
-  // Raw admin mic recording (webm/opus), base64 encoded (no data: prefix).
   audio_base64: z.string().min(1),
   mime_type: z.string().default("audio/webm"),
 });
 
-/**
- * Admin-only: convert a freshly recorded voice note through ElevenLabs
- * Speech-to-Speech (cloned voice), upload the synthesized MP3 to Supabase
- * Storage, insert a `messages` row pointing at it, and return the path.
- *
- * The original raw recording is NEVER written to storage or the database.
- * Only the synthesized cloned-voice MP3 leaves this function.
- */
 export const sendAdminVoiceNote = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((v) => input.parse(v))
   .handler(async ({ data, context }) => {
-    const apiKey = process.env.ELEVENLABS_API_KEY;
-    if (!apiKey) throw new Error("ElevenLabs is not configured");
+    const apiKey = process.env.LOVABLE_API_KEY;
+    if (!apiKey) throw new Error("AI voice is not configured");
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    // Verify the caller is an admin AND owns the conversation.
+    // Caller must be an admin AND own this conversation.
     const { data: role } = await supabaseAdmin
       .from("user_roles")
       .select("role")
@@ -50,35 +47,57 @@ export const sendAdminVoiceNote = createServerFn({ method: "POST" })
       throw new Error("Not authorized for this conversation");
     }
 
-    // Decode base64 raw mic recording (kept in memory only).
     const raw = Buffer.from(data.audio_base64, "base64");
     if (raw.byteLength === 0) throw new Error("Empty audio");
     if (raw.byteLength > 20 * 1024 * 1024) throw new Error("Audio too large");
 
-    // Send to ElevenLabs Speech-to-Speech with the single admin voice.
-    const form = new FormData();
-    form.append("audio", new Blob([raw], { type: data.mime_type }), "input.webm");
-    form.append("model_id", "eleven_multilingual_sts_v2");
-    form.append("remove_background_noise", "true");
+    // ---- 1) Speech-to-text ----
+    const sttForm = new FormData();
+    sttForm.append("file", new Blob([raw], { type: data.mime_type }), "input.webm");
+    sttForm.append("model", "openai/gpt-4o-mini-transcribe");
+    sttForm.append("response_format", "json");
 
-    const ttsRes = await fetch(
-      `https://api.elevenlabs.io/v1/speech-to-speech/${ADMIN_VOICE_ID}?output_format=mp3_44100_128`,
-      {
-        method: "POST",
-        headers: { "xi-api-key": apiKey },
-        body: form,
+    const sttRes = await fetch("https://ai.gateway.lovable.dev/v1/audio/transcriptions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}` },
+      body: sttForm,
+    });
+    if (!sttRes.ok) {
+      const errText = await sttRes.text();
+      console.error("STT failed", sttRes.status, errText);
+      if (sttRes.status === 429) throw new Error("Voice service is busy, please retry");
+      if (sttRes.status === 402) throw new Error("AI credits exhausted");
+      throw new Error(`Transcription failed (${sttRes.status})`);
+    }
+    const sttJson = (await sttRes.json()) as { text?: string };
+    const transcript = (sttJson.text ?? "").trim();
+    if (!transcript) throw new Error("Could not understand audio");
+
+    // ---- 2) Text-to-speech (single shared admin voice) ----
+    const ttsRes = await fetch("https://ai.gateway.lovable.dev/v1/audio/speech", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
       },
-    );
-
+      body: JSON.stringify({
+        model: "openai/gpt-4o-mini-tts",
+        input: transcript,
+        voice: ADMIN_VOICE,
+        response_format: "mp3",
+      }),
+    });
     if (!ttsRes.ok) {
       const errText = await ttsRes.text();
-      console.error("ElevenLabs STS failed", ttsRes.status, errText);
+      console.error("TTS failed", ttsRes.status, errText);
+      if (ttsRes.status === 429) throw new Error("Voice service is busy, please retry");
+      if (ttsRes.status === 402) throw new Error("AI credits exhausted");
       throw new Error(`Voice synthesis failed (${ttsRes.status})`);
     }
-
     const mp3 = new Uint8Array(await ttsRes.arrayBuffer());
     if (mp3.byteLength === 0) throw new Error("Empty synthesized audio");
 
+    // ---- 3) Store synthesized audio only ----
     const path = `${conv.owner_admin_id}/${conv.id}/${Date.now()}-${crypto.randomUUID()}.mp3`;
     const { error: upErr } = await supabaseAdmin.storage
       .from("chat-photos")
@@ -93,7 +112,6 @@ export const sendAdminVoiceNote = createServerFn({ method: "POST" })
       media_kind: "voice",
     });
     if (insErr) {
-      // best-effort cleanup so we don't leak the object
       await supabaseAdmin.storage.from("chat-photos").remove([path]).catch(() => {});
       throw new Error(insErr.message);
     }
